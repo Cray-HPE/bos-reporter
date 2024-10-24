@@ -1,0 +1,12 @@
+
+[Unit]
+Description=bos-status-reporter reports boot session information periodically to the BOS API
+DefaultDependencies=no
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/cray/csm/scripts/bos/bos_reporter
+
+[Install]
+WantedBy=multi-user.target
