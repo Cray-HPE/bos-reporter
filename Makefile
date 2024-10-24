@@ -53,6 +53,7 @@ prepare:
 		rm -rf $(BUILD_DIR)
 		mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
 		cp $(SPEC_FILE) $(BUILD_DIR)/SPECS/
+		zypper in 'rpmbuild>=4.20'
 
 rpm_package_source:		
 		touch $(SOURCE_PATH)
