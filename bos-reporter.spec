@@ -40,7 +40,8 @@ Provides: bos-reporter == %{version}
 Obsoletes: bos-reporter < %{version}
 Vendor: Cray Inc.
 # Using or statements in spec files requires RPM >= 4.13
-BuildRequires: rpm-build >= 4.13
+# Using %elif statements in spec files requires rpm-build >= 4.20
+BuildRequires: rpm-build >= 4.20
 Requires: rpm >= 4.13
 BuildRequires: (python%{python_version_nodots}-base or python3-base >= %{py_version})
 BuildRequires: python-rpm-generators
