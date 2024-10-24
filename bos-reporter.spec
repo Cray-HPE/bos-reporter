@@ -51,6 +51,18 @@ Requires: systemd
 Requires: cray-auth-utils
 Requires: spire-agent
 
+# Add strategic obsoletes statements to ensure bos-reporter installs for the highest Python version on the system
+%if "%{py_version}" == "3.9"
+Obsoletes: python3-bos-reporter <= %{version}
+%elif "%{py_version}" == "3.10"
+Obsoletes: python3-bos-reporter <= %{version}
+Obsoletes: python39-bos-reporter <= %{version}
+%elif "%{py_version}" == "3.11"
+Obsoletes: python3-bos-reporter <= %{version}
+Obsoletes: python39-bos-reporter <= %{version}
+Obsoletes: python310-bos-reporter <= %{version}
+%endif
+
 # Death to Fascist build policies
 %define _unpackaged_files_terminate_build 0
 %define _systemdsvcdir /usr/lib/systemd/system
