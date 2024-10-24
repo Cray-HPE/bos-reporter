@@ -159,6 +159,7 @@ pipeline {
                             BUILD_DIR = "${env.WORKSPACE}/${env.BUILD_RELDIR}"
                         }
                         steps {
+                            sh "rpm -qa | grep rpm"
                             sh "make prepare"
                             sh "make rpm"
                         }

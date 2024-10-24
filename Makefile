@@ -54,7 +54,7 @@ prepare:
 		mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
 		cp $(SPEC_FILE) $(BUILD_DIR)/SPECS/
 
-rpm_package_source:
+rpm_package_source:		
 		touch $(SOURCE_PATH)
 		tar --transform 'flags=r;s,^,/$(SOURCE_NAME)/,' --exclude .git --exclude ./cms_meta_tools --exclude ./dist --exclude $(SOURCE_BASENAME) -cvjf $(SOURCE_PATH) .
 
