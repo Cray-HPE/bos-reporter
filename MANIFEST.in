@@ -1,0 +1,3 @@
+graft src
+include .version
+include README.md
