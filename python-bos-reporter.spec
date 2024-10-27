@@ -40,7 +40,7 @@ BuildArch: %(echo ${RPM_ARCH})
 Provides: python-bos-reporter == %{version}
 # This replaces earlier versions of python-bos-reporter
 Conflicts: python-bos-reporter < %{version}
-Vendor: Cray Inc.
+Vendor: HPE
 # Using or statements in spec files requires RPM and rpm-build >= 4.13
 BuildRequires: rpm-build >= 4.13
 Requires: rpm >= 4.13

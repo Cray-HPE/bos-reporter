@@ -27,7 +27,7 @@ Group: System/Management
 Version: %(cat .version)
 Release: %(cat .rpm_release)
 BuildArch: %(echo ${RPM_ARCH})
-Vendor: Cray Inc.
+Vendor: HPE
 Requires: python-bos-reporter == %{version}
 
 # Death to Fascist build policies
