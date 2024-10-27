@@ -42,6 +42,7 @@ from . import PROTOCOL
 
 LOGGER = logging.getLogger('bos_reporter.client')
 
+SYSTEM_CA_CERTS = "/etc/ssl/ca-bundle.pem"
 TOKEN_DIR = "/etc/opt/cray/tokens/"
 ACCESS_TOKEN_PATH = os.path.join(TOKEN_DIR, 'access')
 REFRESH_TOKEN_PATH = os.path.join(TOKEN_DIR, 'refresh')
@@ -87,4 +88,5 @@ def authorized_requests_retry_session(*pargs, **kwargs) -> requests.Session:
     auth_token = get_auth_token()
     headers = {'Authorization': f'Bearer {auth_token}'}
     session.headers.update(headers)
+    session.verify = SYSTEM_CA_CERTS
     return session
