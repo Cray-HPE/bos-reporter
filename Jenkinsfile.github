@@ -39,6 +39,9 @@ def runLint() {
 def pyImage = 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle-python'
 
 def getRpmName(packageName, pythonVersion) {
+    if (pythonVersion == "meta") {
+        return "${packageName}"
+    }
     if (pythonVersion == "3.6") {
         return "python3-${packageName}"
     }
@@ -71,56 +74,74 @@ pipeline {
     }
 
     stages {
-        stage("Clone cms_meta_tools repo") {
+        stage("Init") {
             steps {
                 // This function is defined in cms-meta-tools:vars/cloneCMSMetaTools.groovy
                 cloneCMSMetaTools()
-            }
-        }
 
-        stage("Set Versions") {
-            steps {
                 // This function is defined in cms-meta-tools:vars/setVersionFiles.groovy
                 setVersionFiles()
+
+                runBuildPrep()
             }
         }
 
-        stage("runBuildPrep") { steps { runBuildPrep() } }
-
-        stage("Lint") { steps { runLint() } }
-
-        // The RPM build metadata can be added outside of the matrix, because it is just based on the
-        // Git commit being built
-        stage("RPM metadata") {
+        stage ("Prep") {
             environment {
                 BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-                SPEC_FILE = "${env.NAME}.spec"
             }
             steps {
+                runLint()
+
+                // The RPM build metadata can be added outside of the matrix, because it is just based on the
+                // Git commit being built
                 echo "RPM build metadata is ${env.BUILD_METADATA}"
-                runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/${env.SPEC_FILE}")
+                runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/bos-reporter.spec")
+                runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/python-bos-reporter.spec")
+
                 // Just using this as a means to generate the netrc file that we need
                 getDockerBuildArgs()
             }
         }
 
-        stage("Build Python module") {
-            agent {
-                docker {
-                    args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
-                    reuseNode true
-                    image "${pyImage}:${MAX_PY_VERSION}"
+        stage("Build Python module & Meta RPM") {
+            parallel {
+                stage("Build Python module") {
+                    agent {
+                        docker {
+                            args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
+                            reuseNode true
+                            image "${pyImage}:${MAX_PY_VERSION}"
+                        }
+                    }
+                    environment {
+                        PY_BIN = sh(script: "./get_python_bin.sh ${MAX_PY_VERSION}", returnStdout: true).trim()
+                    }
+                    steps {
+                        sh "make pymod_build"
+                    }
                 }
-            }
-            environment {
-                PY_BIN = sh(script: "./get_python_bin.sh ${MAX_PY_VERSION}", returnStdout: true).trim()
-            }
-            steps {
-                sh "make pymod_build"
+                stage("Build meta RPM") {
+                    agent {
+                        docker {
+                            args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
+                            reuseNode true
+                            image "${pyImage}:${MAX_PY_VERSION}"
+                        }
+                    }
+                    environment {
+                        RPM_NAME = getRpmName(env.NAME, "meta")
+                        BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
+                        SPEC_FILE = "${env.NAME}.spec"
+                    }
+                    steps {
+                        sh "make meta_rpm"
+                    }
+                }
             }
         }
 
-        stage('Build & Publish RPMs') {
+        stage('Build RPMs') {
 
             matrix {
                 axes {
@@ -140,9 +161,8 @@ pipeline {
 
                 environment {
                     RPM_NAME = getRpmName(env.NAME, "${PY_VERSION}")
-                    BUILD_RELDIR = "${env.BUILD_BASE_RELDIR}/${PY_VERSION}"
                     BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-                    SPEC_FILE = "${env.NAME}.spec"
+                    SPEC_FILE = "python-${env.NAME}.spec"
                 }
 
                 stages {
@@ -157,35 +177,35 @@ pipeline {
                         }
                     }
                     stage("Build RPM") {
-                        environment {
-                            BUILD_DIR = "${env.WORKSPACE}/${env.BUILD_RELDIR}"
-                        }
                         steps {
-                            sh "make prepare"
-                            sh "make rpm"
+                            sh "make python_rpm"
                         }
                     }
+                }
+            }
+        }
 
-                    stage('Publish Rpms') {
-                        steps {
-                            script {
-                                publishCsmRpms(
-                                    arch: env.RPM_ARCH,
-                                    isStable: env.IS_STABLE,
-                                    component: env.RPM_NAME,
-                                    os: env.RPM_OS,
-                                    pattern: "${env.BUILD_RELDIR}/RPMS/${env.RPM_ARCH}/*.rpm",
-                                )
-                                publishCsmRpms(
-                                    arch: "src",
-                                    component: env.RPM_NAME,
-                                    isStable: env.IS_STABLE,
-                                    os: env.RPM_OS,
-                                    pattern: "${env.BUILD_RELDIR}/SRPMS/*.rpm",
-
-                                )
-                            }
-                        }
+        stage('Publish RPMs') {
+            steps {
+                script {
+                    def allVersions = [ '3.6', '3.9', '3.10', '3.11', 'meta' ]
+                    allVersions.each() {
+                        def rpm_name = getRpmName(env.NAME, it)
+                        def build_reldir = "${env.BUILD_BASE_RELDIR}/${rpm_name}"
+                        publishCsmRpms(
+                            arch: env.RPM_ARCH,
+                            isStable: env.IS_STABLE,
+                            component: "${rpm_name}",
+                            os: env.RPM_OS,
+                            pattern: "${build_reldir}/RPMS/${env.RPM_ARCH}/*.rpm",
+                        )
+                        publishCsmRpms(
+                            arch: "src",
+                            component: "${rpm_name}",
+                            isStable: env.IS_STABLE,
+                            os: env.RPM_OS,
+                            pattern: "${build_reldir}/SRPMS/*.rpm",
+                        )
                     }
                 }
             }
