@@ -32,8 +32,30 @@ def runBuildPrep() {
     }
 }
 
-def getPythonBin(pyDottedVer) {
-    return sh(script: "./cms_meta_tools/scripts/get_python_bin.sh ${pyDottedVer}", returnStdout: true).trim()
+def fileExistsAndExecutable(filepath) {
+    if (fileExists(pyBinDottedPath)) {
+        rc = sh(script: "[ -x '${pyBinDottedPath}' ]", returnStatus: true)
+        if (rc == 0) {
+            return true
+        }
+    }
+    return false
+}
+
+def getPythonBin(pyDottedMajorMinor) {
+    // Argument must be <py major>.<py minor>
+    assert "${pyDottedMajorMinor}" ==~ /[1-9]\d*[.]\d+/
+    def pyBinPrefix = "/usr/bin/python"
+    def pyBinDottedPath = pyBinPrefix + pyDottedMajorMinor
+    if (fileExistsAndExecutable(pyBinDottedPath)) {
+        return pyBinDottedPath
+    }
+    def pyMajorMinor = pyDottedMajorMinor.replaceAll('.','')
+    def pyBinNoDotPath = pyBinPrefix + pyMajorMinor
+    if (fileExistsAndExecutable(pyBinNoDotPath)) {
+        return pyBinNoDotPath
+    }
+    error("Failing build because no Python binary found for version ${pyBinNoDotPath}")
 }
 
 def runLint() {
@@ -164,7 +186,7 @@ pipeline {
                 }
 
                 environment {
-                    RPM_NAME = getRpmName(env.NAME, "${PY_VERSION}")
+                    RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
                     BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
                     SPEC_FILE = "python-${env.NAME}.spec"
                 }
@@ -172,7 +194,7 @@ pipeline {
                 stages {
                     stage("Pylint") {
                         environment {
-                            PY_BIN = getPythonBin("${PY_VERSION}")
+                            PY_BIN = getPythonBin(env.PY_VERSION)
                         }
                         steps {
                             sh "make pymod_pylint_setup"
