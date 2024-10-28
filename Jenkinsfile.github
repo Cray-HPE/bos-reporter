@@ -32,37 +32,6 @@ def runBuildPrep() {
     }
 }
 
-def fileExistsAndExecutable(filepath) {
-    rc = sh(script: "[ -f '${filepath}' ] && [ -x '${filepath}' ]", returnStatus: true)
-    if (rc == 0) {
-        return true
-    }
-    return false
-}
-
-def isValidPythonMajorMinor(pyDottedMajorMinor) {
-    if ("${pyDottedMajorMinor}" ==~ /[1-9]\d*[.]\d+/) {
-        return true
-    }
-    return false
-}
-
-def getPythonBin(pyDottedMajorMinor) {
-    // Argument must be <py major>.<py minor>
-    isValidPythonMajorMinor(pyDottedMajorMinor)
-    def pyBinPrefix = "/usr/bin/python"
-    def pyBinDottedPath = pyBinPrefix + pyDottedMajorMinor
-    if (fileExistsAndExecutable(pyBinDottedPath)) {
-        return pyBinDottedPath
-    }
-    def pyMajorMinor = pyDottedMajorMinor.replaceAll('[.]','')
-    def pyBinNoDotPath = pyBinPrefix + pyMajorMinor
-    if (fileExistsAndExecutable(pyBinNoDotPath)) {
-        return pyBinNoDotPath
-    }
-    error("Failing build because no Python binary found for version ${pyDottedMajorMinor}")
-}
-
 def runLint() {
     sh "make lint"
 }
@@ -74,7 +43,7 @@ def getRpmName(packageName, pythonVersion) {
         return "${packageName}"
     }
     // If it is not meta, then it should be 'major.minor'
-    isValidPythonMajorMinor(pythonVersion)
+    isValidMajorDotMinor(pythonVersion)
     if (pythonVersion == "3.6") {
         return "python3-${packageName}"
     }
@@ -148,7 +117,7 @@ pipeline {
                         }
                     }
                     environment {
-                        PY_BIN = getPythonBin(env.MAX_PY_VERSION)
+                        PY_BIN = getPythonBinaryPath(env.MAX_PY_VERSION)
                     }
                     steps {
                         sh "make pymod_build"
@@ -201,7 +170,7 @@ pipeline {
                 stages {
                     stage("Pylint") {
                         environment {
-                            PY_BIN = getPythonBin(env.PY_VERSION)
+                            PY_BIN = getPythonBinaryPath(env.PY_VERSION)
                         }
                         steps {
                             sh "make pymod_pylint_setup"
