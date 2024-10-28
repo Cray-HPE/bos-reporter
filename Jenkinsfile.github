@@ -33,11 +33,9 @@ def runBuildPrep() {
 }
 
 def fileExistsAndExecutable(filepath) {
-    if (fileExists(filepath)) {
-        rc = sh(script: "[ -x '${filepath}' ]", returnStatus: true)
-        if (rc == 0) {
-            return true
-        }
+    rc = sh(script: "[ -f '${filepath}' ] && [ -x '${filepath}' ]", returnStatus: true)
+    if (rc == 0) {
+        return true
     }
     return false
 }
