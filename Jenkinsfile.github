@@ -33,7 +33,7 @@ def runBuildPrep() {
 }
 
 def getPythonBin(pyDottedVer) {
-    return sh(script: "./cms_meta_tools/get_python_bin.sh ${pyDottedVer}", returnStdout: true).trim()
+    return sh(script: "./cms_meta_tools/scripts/get_python_bin.sh ${pyDottedVer}", returnStdout: true).trim()
 }
 
 def runLint() {
