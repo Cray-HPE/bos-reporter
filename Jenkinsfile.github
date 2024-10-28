@@ -91,7 +91,6 @@ pipeline {
         stage ("Prep") {
             environment {
                 BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-                RPM_NAME = getRpmName(env.NAME, "311")
             }
             steps {
                 runLint()
@@ -118,7 +117,8 @@ pipeline {
                         }
                     }
                     environment {
-                        PY_BIN = getPythonBinaryPath(env.MAX_PY_VERSION)
+                        // PY_BIN = getPythonBinaryPath(env.MAX_PY_VERSION)
+                        PY_BIN = getPythonBinaryPath("310")
                     }
                     steps {
                         sh "make pymod_build"
