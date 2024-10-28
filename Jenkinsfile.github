@@ -42,20 +42,27 @@ def fileExistsAndExecutable(filepath) {
     return false
 }
 
+def isValidPythonMajorMinor(pyDottedMajorMinor) {
+    if ("${pyDottedMajorMinor}" ==~ /[1-9]\d*[.]\d+/) {
+        return true
+    }
+    return false
+}
+
 def getPythonBin(pyDottedMajorMinor) {
     // Argument must be <py major>.<py minor>
-    assert "${pyDottedMajorMinor}" ==~ /[1-9]\d*[.]\d+/
+    isValidPythonMajorMinor(pyDottedMajorMinor)
     def pyBinPrefix = "/usr/bin/python"
     def pyBinDottedPath = pyBinPrefix + pyDottedMajorMinor
     if (fileExistsAndExecutable(pyBinDottedPath)) {
         return pyBinDottedPath
     }
-    def pyMajorMinor = pyDottedMajorMinor.replaceAll('.','')
+    def pyMajorMinor = pyDottedMajorMinor.replaceAll('[.]','')
     def pyBinNoDotPath = pyBinPrefix + pyMajorMinor
     if (fileExistsAndExecutable(pyBinNoDotPath)) {
         return pyBinNoDotPath
     }
-    error("Failing build because no Python binary found for version ${pyBinNoDotPath}")
+    error("Failing build because no Python binary found for version ${pyDottedMajorMinor}")
 }
 
 def runLint() {
@@ -68,6 +75,8 @@ def getRpmName(packageName, pythonVersion) {
     if (pythonVersion == "meta") {
         return "${packageName}"
     }
+    // If it is not meta, then it should be 'major.minor'
+    isValidPythonMajorMinor(pythonVersion)
     if (pythonVersion == "3.6") {
         return "python3-${packageName}"
     }
