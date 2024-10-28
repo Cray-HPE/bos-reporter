@@ -42,6 +42,10 @@ def getRpmName(packageName, pythonVersion) {
     if (pythonVersion == "meta") {
         return "${packageName}"
     }
+    // If it is not meta, then it should be 'major.minor'
+    if (!isValidMajorDotMinor(pythonVersion)) {
+        error("Invalid Python version specified: ${pythonVersion}")
+    }
     if (pythonVersion == "3.6") {
         return "python3-${packageName}"
     }
@@ -115,7 +119,7 @@ pipeline {
                         }
                     }
                     environment {
-                        PY_BIN = sh(script: "./get_python_bin.sh ${MAX_PY_VERSION}", returnStdout: true).trim()
+                        PY_BIN = getPythonBinaryPath(env.MAX_PY_VERSION)
                     }
                     steps {
                         sh "make pymod_build"
@@ -160,7 +164,7 @@ pipeline {
                 }
 
                 environment {
-                    RPM_NAME = getRpmName(env.NAME, "${PY_VERSION}")
+                    RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
                     BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
                     SPEC_FILE = "python-${env.NAME}.spec"
                 }
@@ -168,7 +172,7 @@ pipeline {
                 stages {
                     stage("Pylint") {
                         environment {
-                            PY_BIN = sh(script: "./get_python_bin.sh ${PY_VERSION}", returnStdout: true).trim()
+                            PY_BIN = getPythonBinaryPath(env.PY_VERSION)
                         }
                         steps {
                             sh "make pymod_pylint_setup"
