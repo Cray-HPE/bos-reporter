@@ -32,6 +32,10 @@ def runBuildPrep() {
     }
 }
 
+def getPythonBin(pyDottedVer) {
+    return sh(script: "./cms_meta_tools/get_python_bin.sh ${pyDottedVer}", returnStdout: true).trim()
+}
+
 def runLint() {
     sh "make lint"
 }
@@ -115,7 +119,7 @@ pipeline {
                         }
                     }
                     environment {
-                        PY_BIN = sh(script: "./get_python_bin.sh ${MAX_PY_VERSION}", returnStdout: true).trim()
+                        PY_BIN = getPythonBin(env.MAX_PY_VERSION)
                     }
                     steps {
                         sh "make pymod_build"
@@ -168,7 +172,7 @@ pipeline {
                 stages {
                     stage("Pylint") {
                         environment {
-                            PY_BIN = sh(script: "./get_python_bin.sh ${PY_VERSION}", returnStdout: true).trim()
+                            PY_BIN = getPythonBin("${PY_VERSION}")
                         }
                         steps {
                             sh "make pymod_pylint_setup"
