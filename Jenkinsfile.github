@@ -23,7 +23,7 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-@Library('cms-meta-tools@test') _
+@Library('cms-meta-tools') _
 @Library('csm-shared-library') __
 
 def runBuildPrep() {
@@ -43,7 +43,9 @@ def getRpmName(packageName, pythonVersion) {
         return "${packageName}"
     }
     // If it is not meta, then it should be 'major.minor'
-    isValidMajorDotMinor(pythonVersion)
+    if (!isValidMajorDotMinor(pythonVersion)) {
+        error("Invalid Python version specified: ${pythonVersion}")
+    }
     if (pythonVersion == "3.6") {
         return "python3-${packageName}"
     }
@@ -91,6 +93,7 @@ pipeline {
         stage ("Prep") {
             environment {
                 BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
+                RPM_NAME = getRpmName(env.NAME, "311")
             }
             steps {
                 runLint()
@@ -117,8 +120,7 @@ pipeline {
                         }
                     }
                     environment {
-                        // PY_BIN = getPythonBinaryPath(env.MAX_PY_VERSION)
-                        PY_BIN = getPythonBinaryPath("310")
+                        PY_BIN = getPythonBinaryPath(env.MAX_PY_VERSION)
                     }
                     steps {
                         sh "make pymod_build"
