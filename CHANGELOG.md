@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2024/11/01
+
+### Changed
+
+- Incorporated `bos-utils` package into `bos-reporter`.
+
 ## [3.0.0] - 2024/10/27
 
 ### Added

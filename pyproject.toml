@@ -39,7 +39,7 @@ classifiers = [
     'Programming Language :: Python :: 3.12',
 ]
 description = 'BOS state reporter.'
-dependencies = [ 'bos-utils', 'requests', 'urllib3' ]
+dependencies = [ 'requests', 'requests-retry-session', 'urllib3' ]
 maintainers = [
     { name = 'Jason Sollom', email = 'jason.sollom@hpe.com'},
     { name = 'Joel Landsteiner', email = 'joel.landsteiner@hpe.com'},

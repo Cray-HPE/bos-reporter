@@ -32,10 +32,10 @@ import json
 from requests.exceptions import HTTPError, ConnectionError
 from urllib3.exceptions import MaxRetryError
 
-from bos_utils import exc_type_msg
 from bos_reporter.components import BOSComponentException
 from bos_reporter.components import ENDPOINT as COMPONENT_ENDPOINT
 from bos_reporter.client import authorized_requests_retry_session
+from bos_reporter.utils import exc_type_msg
 
 LOGGER = logging.getLogger(__name__)
 

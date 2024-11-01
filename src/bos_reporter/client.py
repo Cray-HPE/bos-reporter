@@ -27,6 +27,7 @@ fashion.
 """
 
 # Standard imports
+from functools import partial
 import os
 import logging
 import subprocess
@@ -34,8 +35,7 @@ import time
 
 # 3rd party imports
 import requests
-
-from bos_utils import requests_retry_session as common_requests_retry_session
+from requests_retry_session import requests_retry_session as base_requests_retry_session
 
 # Local imports
 from . import PROTOCOL
@@ -77,14 +77,20 @@ def get_auth_token(path='/opt/cray/auth-utils/bin/get-auth-token'):
         LOGGER.info("Spire Token not yet available; retrying in a few seconds.")
         time.sleep(2)
 
+
+requests_retry_session = partial(base_requests_retry_session,
+                                 retries=10, backoff_factor=0.5,
+                                 status_forcelist=(500, 502, 503, 504),
+                                 connect_timeout=3, read_timeout=10,
+                                 protocol=PROTOCOL, session=None)
+
+
 def authorized_requests_retry_session(*pargs, **kwargs) -> requests.Session:
     """
     Returns a session with the authorization token included in the headers of the session's
     requests.
     """
-    if 'protocol' not in kwargs:
-        kwargs['protocol'] = PROTOCOL
-    session = common_requests_retry_session(*pargs, **kwargs)
+    session = requests_retry_session(*pargs, **kwargs)
     auth_token = get_auth_token()
     headers = {'Authorization': f'Bearer {auth_token}'}
     session.headers.update(headers)

@@ -27,12 +27,11 @@ import random
 import re
 from time import sleep
 
-from bos_utils import duration_to_timedelta, exc_type_msg
-
 from bos_reporter.client import authorized_requests_retry_session
 from bos_reporter.node_identity import read_identity
 from bos_reporter.components.state import report_state, BOSComponentException, UnknownComponent
 from bos_reporter.proc_cmdline import get_value_from_proc_cmdline
+from bos_reporter.utils import duration_to_timedelta, exc_type_msg
 
 # Configure Project Level Logging options when invoked through __main__;
 # This allows the whole project to log from their source when invoked through
