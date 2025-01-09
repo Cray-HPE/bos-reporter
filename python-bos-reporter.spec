@@ -49,6 +49,7 @@ BuildRequires: python-rpm-generators
 BuildRequires: python-rpm-macros
 BuildRequires: systemd-rpm-macros
 Requires: (python%{python_version_nodots}-base or python3-base >= %{py_version})
+Requires: python3-typing_extensions
 Requires: systemd
 Requires: cray-auth-utils
 Requires: spire-agent
