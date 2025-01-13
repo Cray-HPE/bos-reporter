@@ -47,7 +47,7 @@ PYLINT_VENV ?= pylint-$(PY_VERSION)
 PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
 
 python_rpm_source: rpm_source_prepare rpm_package_source rpm_build_source
-python_rpm_main: rpm_prepare rpm_build
+python_rpm_main: rpm_prepare rpm_copy_source rpm_build
 meta_rpm: rpm_source_prepare rpm_build_source rpm_prepare rpm_build
 pymod: pymod_build pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
 
@@ -87,6 +87,8 @@ rpm_build_source:
 rpm_prepare:
 		mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
 		cp $(SPEC_FILE) $(BUILD_DIR)/SPECS/
+
+rpm_copy_source:
 		cp $(SOURCE_PATH) $(BUILD_DIR)/SOURCES
 
 rpm_build:
