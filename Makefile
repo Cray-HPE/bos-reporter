@@ -48,7 +48,7 @@ SOURCE_BASENAME := ${SOURCE_NAME}.tar.bz2
 SOURCE_PATH := $(BUILD_DIR)/SOURCES/${SOURCE_BASENAME}
 
 python_rpm: rpm_prepare rpm_package_source rpm_build_source rpm_build
-meta_rpm: rpm_source_prepare rpm_build_source rpm_prepare rpm_build
+meta_rpm: rpm_prepare rpm_build_source rpm_build
 pymod: pymod_build pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
 
 runbuildprep:

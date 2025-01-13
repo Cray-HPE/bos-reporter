@@ -55,7 +55,7 @@ def getRpmName(packageName, pythonVersion) {
     return "python${pyMajor}${pyMinor}-${packageName}"
 }
 
-def publishRpm(packageName, pyVersion, rpmArch, isStable) {
+def publishRpms(packageName, pyVersion, rpmArch, isStable) {
     def rpm_name = getRpmName(packageName, pyVersion)
     def build_reldir = "dist/rpmbuild/${rpmArch}/${rpm_name}"
     publishCsmRpms(
@@ -65,11 +65,6 @@ def publishRpm(packageName, pyVersion, rpmArch, isStable) {
         os: "noos",
         pattern: "${build_reldir}/RPMS/${rpmArch}/*.rpm",
     )
-}
-
-def publishSourceRpm(packageName, pyVersion, isStable) {
-    def rpm_name = getRpmName(packageName, pyVersion)
-    def build_reldir = "dist/rpmbuild/noos/${rpm_name}"
     publishCsmRpms(
         arch: "src",
         component: "${rpm_name}",
@@ -248,22 +243,15 @@ pipeline {
                 script {
                     // Publish Python RPMs
                     def allVersions = [ '3.6', '3.9', '3.10', '3.11' ]
-                    def allArches = [ 'x86_64', 'aarch64', 'noarch' ]
+                    def allArches = [ 'x86_64', 'aarch64' ]
                     allVersions.each() { pyVersion ->
                         allArches.each() { rpmArch ->                            
-                            if ("$rpmArch" == "noarch") {
-                                // Source RPM
-                                publishSourceRpm(env.NAME, "${pyVersion}", env.IS_STABLE)
-                            } else {
-                                // Main RPM
-                                publishRpm(env.NAME, "${pyVersion}", "${rpmArch}", env.IS_STABLE)
-                            }
+                            publishRpms(env.NAME, "${pyVersion}", "${rpmArch}", env.IS_STABLE)
                         }
                     }
 
                     // Publish meta RPM
-                    publishRpm(env.NAME, "meta", "noarch", env.IS_STABLE)
-                    publishSourceRpm(env.NAME, "meta", env.IS_STABLE)
+                    publishRpms(env.NAME, "meta", "noarch", env.IS_STABLE)
                 }
             }
         }
