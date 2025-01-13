@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Build RPMs for `x86_64` and `aarch64`
+- Add Python 3.12
+
 ## [3.1.0] - 2024/11/01
 
 ### Changed

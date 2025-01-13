@@ -91,7 +91,7 @@ pipeline {
         DESCRIPTION = "Configuration Framework Service Trust Environment"
         IS_STABLE = getBuildIsStable()
         RPM_OS = "noos"
-        MAX_PY_VERSION = "3.11"
+        MAX_PY_VERSION = "3.12"
     }
 
     stages {
@@ -169,7 +169,7 @@ pipeline {
                 axes {
                     axis {
                         name 'PY_VERSION'
-                        values '3.6', '3.9', '3.10', '3.11'
+                        values '3.6', '3.9', '3.10', '3.11', '3.12'
                     }
                 }
                 agent {
@@ -198,7 +198,7 @@ pipeline {
                 axes {
                     axis {
                         name 'PY_VERSION'
-                        values '3.6', '3.9', '3.10', '3.11'
+                        values '3.6', '3.9', '3.10', '3.11', '3.12'
                     }
                     axis {
                         name 'RPM_ARCH'
@@ -242,7 +242,7 @@ pipeline {
             steps {
                 script {
                     // Publish Python RPMs
-                    def allVersions = [ '3.6', '3.9', '3.10', '3.11' ]
+                    def allVersions = [ '3.6', '3.9', '3.10', '3.11', '3.12' ]
                     def allArches = [ 'x86_64', 'aarch64' ]
                     allVersions.each() { pyVersion ->
                         allArches.each() { rpmArch ->                            
