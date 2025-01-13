@@ -1,4 +1,4 @@
-# Copyright 2024 Hewlett Packard Enterprise Development LP
+# Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -35,7 +35,7 @@ Summary: A system service which reports information about a booted node state
 Group: System/Management
 Version: %(cat .version)
 Release: %(cat .rpm_release)
-Source: %{name}-%{version}.tar.bz2
+Source: %(echo ${SOURCE_BASENAME})
 BuildArch: %(echo ${RPM_ARCH})
 Provides: python-bos-reporter == %{version}
 # This replaces earlier versions of python-bos-reporter

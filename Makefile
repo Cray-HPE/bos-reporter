@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2024 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,25 +24,28 @@
 # If you wish to perform a local build, you will need to clone or copy the contents of the
 # cms-meta-tools repo to ./cms_meta_tools
 
-NAME ?= bos-reporter
-RPM_VERSION ?= $(shell head -1 .version)
-RPM_ARCH ?= noarch
-RPM_OS ?= noos
-BUILD_BASE_RELDIR ?= dist/rpmbuild/$(RPM_ARCH)
-PY_VERSION ?= 3.6
-RPM_NAME ?= python3-bos-reporter
-BUILD_RELDIR ?= $(BUILD_BASE_RELDIR)/$(RPM_NAME)
-SPEC_FILE ?= python-$(NAME).spec
 BUILD_METADATA ?= "1~development~$(shell git rev-parse --short HEAD)"
-SOURCE_NAME ?= ${RPM_NAME}-${RPM_VERSION}
-SOURCE_BASENAME := ${SOURCE_NAME}.tar.bz2
-BUILD_DIR ?= $(PWD)/$(BUILD_RELDIR)
-SOURCE_PATH := ${BUILD_DIR}/SOURCES/${SOURCE_BASENAME}
+BUILD_ROOT_RELDIR ?= dist/rpmbuild
+NAME ?= bos-reporter
+PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
+PY_VERSION ?= 3.6
+RPM_ARCH ?= noarch
+RPM_NAME ?= python3-bos-reporter
+RPM_VERSION ?= $(shell head -1 .version)
+
 PYTHON_BIN := python$(PY_VERSION)
 PY_BIN ?= /usr/bin/$(PYTHON_BIN)
-PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
 PYLINT_VENV ?= pylint-$(PY_VERSION)
 PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
+SPEC_FILE ?= python-$(NAME).spec
+
+BUILD_BASE_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(RPM_ARCH)
+BUILD_RELDIR ?= $(BUILD_BASE_RELDIR)/$(RPM_NAME)
+BUILD_DIR ?= $(PWD)/$(BUILD_RELDIR)
+
+SOURCE_NAME ?= ${RPM_NAME}-${RPM_VERSION}
+SOURCE_BASENAME := ${SOURCE_NAME}.tar.bz2
+SOURCE_PATH := $(BUILD_DIR)/SOURCES/${SOURCE_BASENAME}
 
 python_rpm: rpm_prepare rpm_package_source rpm_build_source rpm_build
 meta_rpm: rpm_prepare rpm_build_source rpm_build
@@ -54,8 +57,10 @@ runbuildprep:
 lint:
 		./cms_meta_tools/scripts/runLint.sh
 
+rpm_pre_clean:
+		rm -rf $(BUILD_ROOT_RELDIR)
+
 rpm_prepare:
-		rm -rf $(BUILD_DIR)
 		mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
 		cp $(SPEC_FILE) $(BUILD_DIR)/SPECS/
 
@@ -73,17 +78,23 @@ rpm_package_source:
 			-cvjf $(SOURCE_PATH) .
 
 rpm_build_source:
-		RPM_NAME=$(RPM_NAME) \
+		uname -a
+		BUILD_METADATA="$(BUILD_METADATA)" \
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
-		BUILD_METADATA="$(BUILD_METADATA)" \
+		RPM_ARCH=$(RPM_ARCH) \
+		RPM_NAME=$(RPM_NAME) \
+		SOURCE_BASENAME="$(SOURCE_BASENAME)" \
 		rpmbuild -bs $(SPEC_FILE) --target $(RPM_ARCH) --define "_topdir $(BUILD_DIR)"
 
 rpm_build:
-		RPM_NAME=$(RPM_NAME) \
+		uname -a
+		BUILD_METADATA="$(BUILD_METADATA)" \
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
-		BUILD_METADATA="$(BUILD_METADATA)" \
+		RPM_ARCH=$(RPM_ARCH) \
+		RPM_NAME=$(RPM_NAME) \
+		SOURCE_BASENAME="$(SOURCE_BASENAME)" \
 		rpmbuild -ba $(SPEC_FILE) --target $(RPM_ARCH) --define "_topdir $(BUILD_DIR)"
 
 pymod_build:
