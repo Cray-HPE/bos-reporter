@@ -24,20 +24,20 @@
 # If you wish to perform a local build, you will need to clone or copy the contents of the
 # cms-meta-tools repo to ./cms_meta_tools
 
-NAME ?= bos-reporter
-RPM_ARCH ?= noarch
-PY_VERSION ?= 3.6
-RPM_NAME ?= python3-bos-reporter
-BUILD_ROOT_RELDIR ?= dist/rpmbuild
 BUILD_METADATA ?= "1~development~$(shell git rev-parse --short HEAD)"
+BUILD_ROOT_RELDIR ?= dist/rpmbuild
+NAME ?= bos-reporter
 PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
+PY_VERSION ?= 3.6
+RPM_ARCH ?= noarch
+RPM_NAME ?= python3-bos-reporter
 RPM_VERSION ?= $(shell head -1 .version)
 
-SPEC_FILE ?= python-$(NAME).spec
 PYTHON_BIN := python$(PY_VERSION)
 PY_BIN ?= /usr/bin/$(PYTHON_BIN)
 PYLINT_VENV ?= pylint-$(PY_VERSION)
 PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
+SPEC_FILE ?= python-$(NAME).spec
 
 SOURCE_NAME ?= ${RPM_NAME}-${RPM_VERSION}
 SOURCE_BASENAME := ${SOURCE_NAME}.tar.bz2
@@ -81,13 +81,13 @@ rpm_package_source:
 			-cvjf $(SOURCE_PATH) .
 
 rpm_build_source:
-		RPM_NAME=$(RPM_NAME) \
-		RPM_ARCH=$(RPM_ARCH) \
+		BUILD_METADATA="$(BUILD_METADATA)" \
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
-		BUILD_METADATA="$(BUILD_METADATA)" \
+		RPM_ARCH=$(RPM_ARCH) \
+		RPM_NAME=$(RPM_NAME) \
 		SOURCE_BASENAME="$(SOURCE_BASENAME)" \
-		rpmbuild -bs $(SPEC_FILE) --target noarch --define "_topdir $(SOURCE_BUILD_DIR)"
+		rpmbuild -bs $(SPEC_FILE) --define "_topdir $(SOURCE_BUILD_DIR)"
 
 rpm_prepare:
 		mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
@@ -97,11 +97,11 @@ rpm_copy_source:
 		cp $(SOURCE_PATH) $(BUILD_DIR)/SOURCES
 
 rpm_build:
-		RPM_NAME=$(RPM_NAME) \
-		RPM_ARCH=$(RPM_ARCH) \
+		BUILD_METADATA="$(BUILD_METADATA)" \
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
-		BUILD_METADATA="$(BUILD_METADATA)" \
+		RPM_ARCH=$(RPM_ARCH) \
+		RPM_NAME=$(RPM_NAME) \
 		SOURCE_BASENAME="$(SOURCE_BASENAME)" \
 		rpmbuild -ba $(SPEC_FILE) --target $(RPM_ARCH) --define "_topdir $(BUILD_DIR)"
 
