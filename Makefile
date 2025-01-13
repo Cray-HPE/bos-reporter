@@ -82,6 +82,7 @@ rpm_package_source:
 
 rpm_build_source:
 		RPM_NAME=$(RPM_NAME) \
+		RPM_ARCH=$(RPM_ARCH) \
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
 		BUILD_METADATA="$(BUILD_METADATA)" \
@@ -97,6 +98,7 @@ rpm_copy_source:
 
 rpm_build:
 		RPM_NAME=$(RPM_NAME) \
+		RPM_ARCH=$(RPM_ARCH) \
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
 		BUILD_METADATA="$(BUILD_METADATA)" \
