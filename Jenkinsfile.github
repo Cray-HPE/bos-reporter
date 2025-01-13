@@ -97,7 +97,6 @@ pipeline {
         IS_STABLE = getBuildIsStable()
         RPM_OS = "noos"
         MAX_PY_VERSION = "3.11"
-        PRIMARY_NODE = "${env.NODE_NAME}"
     }
 
     stages {
@@ -248,9 +247,8 @@ pipeline {
                     stage("Build") {
                         agent {
                             docker {
-                                label "${PRIMARY_NODE}"
                                 reuseNode true
-                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh --platform linux/${DOCKER_ARCH}"
+                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
                                 image "${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
                             }
                         }
