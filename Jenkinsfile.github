@@ -228,10 +228,10 @@ pipeline {
                         name 'PY_VERSION'
                         values '3.6', '3.9', '3.10', '3.11'
                     }
-                }
-                axis {
-                    name 'RPM_ARCH'
-                    values 'x86_64', 'aarch64'
+                    axis {
+                        name 'RPM_ARCH'
+                        values 'x86_64', 'aarch64'
+                    }
                 }
                 environment {
                     DOCKER_ARCH = sh(returnStdout: true, script: "[ ${ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
@@ -251,7 +251,7 @@ pipeline {
                                 label "${PRIMARY_NODE}"
                                 reuseNode true
                                 args "-v /home/jenkins/.ssh:/home/jenkins/.ssh --platform linux/${DOCKER_ARCH}"
-                                image "${pyImage}:${DOCKER_ARCH}"
+                                image "${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
                             }
                         }
                         environment {
