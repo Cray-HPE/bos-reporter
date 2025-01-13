@@ -59,7 +59,7 @@ def publishRpm(packageName, pyVersion, rpmArch, isStable) {
     def rpm_name = getRpmName(packageName, pyVersion)
     def build_reldir = "dist/rpmbuild/${rpmArch}/${rpm_name}"
     publishCsmRpms(
-        arch: "${rpmArch}",,
+        arch: "${rpmArch}",
         isStable: env.IS_STABLE,
         component: "${rpm_name}",
         os: "noos",
