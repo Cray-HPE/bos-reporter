@@ -25,26 +25,29 @@
 # cms-meta-tools repo to ./cms_meta_tools
 
 NAME ?= bos-reporter
-RPM_VERSION ?= $(shell head -1 .version)
 RPM_ARCH ?= noarch
-BUILD_ROOT_RELDIR ?= dist/rpmbuild
-BUILD_BASE_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(RPM_ARCH)
 PY_VERSION ?= 3.6
 RPM_NAME ?= python3-bos-reporter
-BUILD_RELDIR ?= $(BUILD_BASE_RELDIR)/$(RPM_NAME)
-SPEC_FILE ?= python-$(NAME).spec
+BUILD_ROOT_RELDIR ?= dist/rpmbuild
 BUILD_METADATA ?= "1~development~$(shell git rev-parse --short HEAD)"
+PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
+RPM_VERSION ?= $(shell head -1 .version)
+
+SPEC_FILE ?= python-$(NAME).spec
+PYTHON_BIN := python$(PY_VERSION)
+PY_BIN ?= /usr/bin/$(PYTHON_BIN)
+PYLINT_VENV ?= pylint-$(PY_VERSION)
+PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
+
 SOURCE_NAME ?= ${RPM_NAME}-${RPM_VERSION}
 SOURCE_BASENAME := ${SOURCE_NAME}.tar.bz2
-BUILD_DIR ?= $(PWD)/$(BUILD_RELDIR)
 SOURCE_BUILD_RELDIR := $(BUILD_ROOT_RELDIR)/noarch/$(RPM_NAME)
 SOURCE_BUILD_DIR := $(PWD)/$(SOURCE_BUILD_RELDIR)
 SOURCE_PATH := $(SOURCE_BUILD_DIR)/SOURCES/${SOURCE_BASENAME}
-PYTHON_BIN := python$(PY_VERSION)
-PY_BIN ?= /usr/bin/$(PYTHON_BIN)
-PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
-PYLINT_VENV ?= pylint-$(PY_VERSION)
-PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
+
+BUILD_BASE_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(RPM_ARCH)
+BUILD_RELDIR ?= $(BUILD_BASE_RELDIR)/$(RPM_NAME)
+BUILD_DIR ?= $(PWD)/$(BUILD_RELDIR)
 
 python_rpm_source: rpm_source_prepare rpm_package_source rpm_build_source
 python_rpm_main: rpm_prepare rpm_copy_source rpm_build
@@ -96,6 +99,7 @@ rpm_build:
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
 		BUILD_METADATA="$(BUILD_METADATA)" \
+		SOURCE_BASENAME="$(SOURCE_BASENAME)" \
 		rpmbuild -ba $(SPEC_FILE) --target $(RPM_ARCH) --define "_topdir $(BUILD_DIR)"
 
 pymod_build:

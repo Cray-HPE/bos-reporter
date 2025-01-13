@@ -35,7 +35,7 @@ Summary: A system service which reports information about a booted node state
 Group: System/Management
 Version: %(cat .version)
 Release: %(cat .rpm_release)
-Source: %(echo ${SOURCE_NAME})
+Source: %(echo ${SOURCE_BASENAME})
 BuildArch: %(echo ${RPM_ARCH})
 Provides: python-bos-reporter == %{version}
 # This replaces earlier versions of python-bos-reporter
