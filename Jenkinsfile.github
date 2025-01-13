@@ -2,7 +2,7 @@
  *
  *  MIT License
  *
- *  (C) Copyright 2021-2024 Hewlett Packard Enterprise Development LP
+ *  (C) Copyright 2021-2025 Hewlett Packard Enterprise Development LP
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a
  *  copy of this software and associated documentation files (the "Software"),
@@ -55,6 +55,30 @@ def getRpmName(packageName, pythonVersion) {
     return "python${pyMajor}${pyMinor}-${packageName}"
 }
 
+def publishRpm(packageName, pyVersion, rpmArch, isStable) {
+    def rpm_name = getRpmName(packageName, pyVersion)
+    def build_reldir = "dist/rpmbuild/${rpmArch}/${rpm_name}"
+    publishCsmRpms(
+        arch: "${rpmArch}",,
+        isStable: env.IS_STABLE,
+        component: "${rpm_name}",
+        os: "noos",
+        pattern: "${build_reldir}/RPMS/${rpmArch}/*.rpm",
+    )
+}
+
+def publishSourceRpm(packageName, pyVersion, isStable) {
+    def rpm_name = getRpmName(packageName, pyVersion)
+    def build_reldir = "dist/rpmbuild/noos/${rpm_name}"
+    publishCsmRpms(
+        arch: "src",
+        component: "${rpm_name}",
+        isStable: env.IS_STABLE,
+        os: "noos",
+        pattern: "${build_reldir}/SRPMS/*.rpm",
+    )
+}
+
 pipeline {
     agent {
         label "metal-gcp-builder"
@@ -71,10 +95,9 @@ pipeline {
         NAME = "bos-reporter"
         DESCRIPTION = "Configuration Framework Service Trust Environment"
         IS_STABLE = getBuildIsStable()
-        RPM_ARCH = "noarch"
         RPM_OS = "noos"
-        BUILD_BASE_RELDIR = "dist/rpmbuild/${env.RPM_ARCH}"
         MAX_PY_VERSION = "3.11"
+        PRIMARY_NODE = "${env.NODE_NAME}"
     }
 
     stages {
@@ -105,6 +128,8 @@ pipeline {
 
                 // Just using this as a means to generate the netrc file that we need
                 getDockerBuildArgs()
+
+                sh "make rpm_pre_clean"
             }
         }
 
@@ -135,6 +160,7 @@ pipeline {
                     }
                     environment {
                         RPM_NAME = getRpmName(env.NAME, "meta")
+                        RPM_ARCH = "noarch"
                         BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
                         SPEC_FILE = "${env.NAME}.spec"
                     }
@@ -144,9 +170,7 @@ pipeline {
                 }
             }
         }
-
-        stage('Build RPMs') {
-
+        stage('Pylint') {
             matrix {
                 axes {
                     axis {
@@ -154,7 +178,6 @@ pipeline {
                         values '3.6', '3.9', '3.10', '3.11'
                     }
                 }
-
                 agent {
                     docker {
                         args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
@@ -162,27 +185,82 @@ pipeline {
                         image "${pyImage}:${PY_VERSION}"
                     }
                 }
-
                 environment {
-                    RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
-                    BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-                    SPEC_FILE = "python-${env.NAME}.spec"
+                    PY_BIN = getPythonBinaryPath(env.PY_VERSION)
                 }
-
                 stages {
                     stage("Pylint") {
-                        environment {
-                            PY_BIN = getPythonBinaryPath(env.PY_VERSION)
-                        }
                         steps {
                             sh "make pymod_pylint_setup"
                             sh "make pymod_pylint_errors"
                             sh "make pymod_pylint_full"
                         }
                     }
-                    stage("Build RPM") {
+                }
+            }
+        }
+        stage('Build Source RPMs') {
+            matrix {
+                axes {
+                    axis {
+                        name 'PY_VERSION'
+                        values '3.6', '3.9', '3.10', '3.11'
+                    }
+                }
+                stages {
+                    stage("Build") {
+                        environment {
+                            RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
+                            BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
+                            SPEC_FILE = "python-${env.NAME}.spec"
+                        }
                         steps {
-                            sh "make python_rpm"
+                            sh "make python_rpm_source"
+                        }
+                    }
+                }
+            }
+        }
+        stage('Build RPMs') {
+            matrix {
+                axes {
+                    axis {
+                        name 'PY_VERSION'
+                        values '3.6', '3.9', '3.10', '3.11'
+                    }
+                }
+                axis {
+                    name 'RPM_ARCH'
+                    values 'x86_64', 'aarch64'
+                }
+                environment {
+                    DOCKER_ARCH = sh(returnStdout: true, script: "[ ${ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
+                }
+                stages {
+                    stage('Setup') {
+                        steps {
+                            lock('docker-image-pull') {
+                                sh "docker pull --platform linux/${DOCKER_ARCH} ${pyImage}:${PY_VERSION}"
+                                sh "docker tag ${pyImage}:${PY_VERSION} ${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
+                            }
+                        }
+                    }
+                    stage("Build") {
+                        agent {
+                            docker {
+                                label "${PRIMARY_NODE}"
+                                reuseNode true
+                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh --platform linux/${DOCKER_ARCH}"
+                                image "${pyImage}:${DOCKER_ARCH}"
+                            }
+                        }
+                        environment {
+                            RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
+                            BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
+                            SPEC_FILE = "python-${env.NAME}.spec"
+                        }
+                        steps {
+                            sh "make python_rpm_main"
                         }
                     }
                 }
@@ -192,25 +270,24 @@ pipeline {
         stage('Publish RPMs') {
             steps {
                 script {
-                    def allVersions = [ '3.6', '3.9', '3.10', '3.11', 'meta' ]
-                    allVersions.each() {
-                        def rpm_name = getRpmName(env.NAME, it)
-                        def build_reldir = "${env.BUILD_BASE_RELDIR}/${rpm_name}"
-                        publishCsmRpms(
-                            arch: env.RPM_ARCH,
-                            isStable: env.IS_STABLE,
-                            component: "${rpm_name}",
-                            os: env.RPM_OS,
-                            pattern: "${build_reldir}/RPMS/${env.RPM_ARCH}/*.rpm",
-                        )
-                        publishCsmRpms(
-                            arch: "src",
-                            component: "${rpm_name}",
-                            isStable: env.IS_STABLE,
-                            os: env.RPM_OS,
-                            pattern: "${build_reldir}/SRPMS/*.rpm",
-                        )
+                    // Publish Python RPMs
+                    def allVersions = [ '3.6', '3.9', '3.10', '3.11' ]
+                    def allArches = [ 'x86_64', 'aarch64', 'noarch' ]
+                    allVersions.each() { pyVersion ->
+                        allArches.each() { rpmArch ->                            
+                            if ("$rpmArch" == "noarch") {
+                                // Source RPM
+                                publishSourceRpm(env.NAME, "${pyVersion}", env.IS_STABLE)
+                            } else {
+                                // Main RPM
+                                publishRpm(env.NAME, "${pyVersion}", "${rpmArch}", env.IS_STABLE)
+                            }
+                        }
                     }
+
+                    // Publish meta RPM
+                    publishRpm(env.NAME, "meta", "noarch", env.IS_STABLE)
+                    publishSourceRpm(env.NAME, "meta", env.IS_STABLE)
                 }
             }
         }

@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2024 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -27,8 +27,8 @@
 NAME ?= bos-reporter
 RPM_VERSION ?= $(shell head -1 .version)
 RPM_ARCH ?= noarch
-RPM_OS ?= noos
-BUILD_BASE_RELDIR ?= dist/rpmbuild/$(RPM_ARCH)
+BUILD_ROOT_RELDIR ?= dist/rpmbuild
+BUILD_BASE_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(RPM_ARCH)
 PY_VERSION ?= 3.6
 RPM_NAME ?= python3-bos-reporter
 BUILD_RELDIR ?= $(BUILD_BASE_RELDIR)/$(RPM_NAME)
@@ -37,15 +37,18 @@ BUILD_METADATA ?= "1~development~$(shell git rev-parse --short HEAD)"
 SOURCE_NAME ?= ${RPM_NAME}-${RPM_VERSION}
 SOURCE_BASENAME := ${SOURCE_NAME}.tar.bz2
 BUILD_DIR ?= $(PWD)/$(BUILD_RELDIR)
-SOURCE_PATH := ${BUILD_DIR}/SOURCES/${SOURCE_BASENAME}
+SOURCE_BUILD_RELDIR := $(BUILD_ROOT_RELDIR)/noarch/$(RPM_NAME)
+SOURCE_BUILD_DIR := $(PWD)/$(SOURCE_BUILD_RELDIR)
+SOURCE_PATH := $(SOURCE_BUILD_DIR)/SOURCES/${SOURCE_BASENAME}
 PYTHON_BIN := python$(PY_VERSION)
 PY_BIN ?= /usr/bin/$(PYTHON_BIN)
 PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
 PYLINT_VENV ?= pylint-$(PY_VERSION)
 PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
 
-python_rpm: rpm_prepare rpm_package_source rpm_build_source rpm_build
-meta_rpm: rpm_prepare rpm_build_source rpm_build
+python_rpm_source: rpm_source_prepare rpm_package_source rpm_build_source
+python_rpm_main: rpm_prepare rpm_build
+meta_rpm: rpm_source_prepare rpm_build_source rpm_prepare rpm_build
 pymod: pymod_build pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
 
 runbuildprep:
@@ -54,10 +57,12 @@ runbuildprep:
 lint:
 		./cms_meta_tools/scripts/runLint.sh
 
-rpm_prepare:
-		rm -rf $(BUILD_DIR)
-		mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
-		cp $(SPEC_FILE) $(BUILD_DIR)/SPECS/
+rpm_pre_clean:
+		rm -rf $(BUILD_ROOT_RELDIR)
+
+rpm_source_prepare:
+		mkdir -p $(SOURCE_BUILD_DIR)/SPECS $(SOURCE_BUILD_DIR)/SOURCES
+		cp $(SPEC_FILE) $(SOURCE_BUILD_DIR)/SPECS/
 
 rpm_package_source:
 		touch $(SOURCE_PATH)
@@ -77,7 +82,12 @@ rpm_build_source:
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
 		BUILD_METADATA="$(BUILD_METADATA)" \
-		rpmbuild -bs $(SPEC_FILE) --target $(RPM_ARCH) --define "_topdir $(BUILD_DIR)"
+		rpmbuild -bs $(SPEC_FILE) --target noarch --define "_topdir $(SOURCE_BUILD_DIR)"
+
+rpm_prepare:
+		mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
+		cp $(SPEC_FILE) $(BUILD_DIR)/SPECS/
+		cp $(SOURCE_PATH) $(BUILD_DIR)/SOURCES
 
 rpm_build:
 		RPM_NAME=$(RPM_NAME) \
