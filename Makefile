@@ -85,6 +85,7 @@ rpm_build_source:
 		PIP_INSTALL_ARGS="$(PIP_INSTALL_ARGS)" \
 		PYTHON_BIN=$(PYTHON_BIN) \
 		BUILD_METADATA="$(BUILD_METADATA)" \
+		SOURCE_BASENAME="$(SOURCE_BASENAME)" \
 		rpmbuild -bs $(SPEC_FILE) --target noarch --define "_topdir $(SOURCE_BUILD_DIR)"
 
 rpm_prepare:

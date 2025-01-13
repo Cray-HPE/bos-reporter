@@ -208,7 +208,7 @@ pipeline {
                     }
                 }
                 stages {
-                    stage("${PY_VERSION}") {
+                    stage("Build") {
                         environment {
                             RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
                             BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
