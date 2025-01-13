@@ -198,28 +198,6 @@ pipeline {
                 }
             }
         }
-        stage('Build Source RPMs') {
-            matrix {
-                axes {
-                    axis {
-                        name 'PY_VERSION'
-                        values '3.6', '3.9', '3.10', '3.11'
-                    }
-                }
-                stages {
-                    stage("Build") {
-                        environment {
-                            RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
-                            BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-                            SPEC_FILE = "python-${env.NAME}.spec"
-                        }
-                        steps {
-                            sh "make python_rpm_source"
-                        }
-                    }
-                }
-            }
-        }
         stage('Build RPMs') {
             matrix {
                 axes {
@@ -258,7 +236,7 @@ pipeline {
                             SPEC_FILE = "python-${env.NAME}.spec"
                         }
                         steps {
-                            sh "make python_rpm_main"
+                            sh "make python_rpm"
                         }
                     }
                 }
