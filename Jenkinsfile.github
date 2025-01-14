@@ -224,8 +224,7 @@ pipeline {
                         agent {
                             docker {
                                 reuseNode true
-                                //args "-u root -v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
-                                args "-v ${WORKSPACE}/jenkins-sudoers:/etc/sudoers.d/jenkins-sudoers -v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
+                                args "-u root -v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"                                
                                 image "${DOCKER_BUILD_IMAGE}"
                             }
                         }
@@ -236,11 +235,10 @@ pipeline {
                         }
                         steps {
                             
-                            sh "sudo zypper --non-interactive refresh"
-                            sh "sudo zypper --non-interactive in --no-confirm python-rpm-generators 'rpm-build>=4.13' python-rpm-macros systemd-rpm-macros"
-                            //sh "useradd -d /home/jenkins jenkins"
-                            //sh "sudo -E -n -H -u jenkins make python_rpm"
-                            sh "make python_rpm"
+                            sh "zypper --non-interactive refresh"
+                            sh "zypper --non-interactive in --no-confirm python-rpm-generators 'rpm-build>=4.13' python-rpm-macros systemd-rpm-macros"
+                            sh "useradd -d /home/jenkins jenkins"
+                            sh "sudo -E -n -H -u jenkins make python_rpm"
                         }
                     }
                     stage('Publish RPMs') {
