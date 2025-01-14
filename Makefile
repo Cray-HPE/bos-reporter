@@ -73,6 +73,7 @@ rpm_package_source:
 			--exclude ./build \
 			--exclude ./cms_meta_tools \
 			--exclude ./dist \
+			--exclude ./jenkins-sudoers \
 			--exclude $(SOURCE_BASENAME) \
 			--exclude './pylint-*' \
 			--exclude ./$(META_SPEC_FILE) \

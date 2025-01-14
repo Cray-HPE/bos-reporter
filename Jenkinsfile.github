@@ -225,7 +225,7 @@ pipeline {
                             docker {
                                 reuseNode true
                                 //args "-u root -v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
-                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
+                                args "-v ${WORKSPACE}/jenkins-sudoers:/etc/sudoers.d/jenkins-sudoers -v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
                                 image "${DOCKER_BUILD_IMAGE}"
                             }
                         }
@@ -235,6 +235,7 @@ pipeline {
                             SPEC_FILE = "python-${env.NAME}.spec"
                         }
                         steps {
+                            
                             sh "sudo zypper --non-interactive refresh"
                             sh "sudo zypper --non-interactive in --no-confirm python-rpm-generators 'rpm-build>=4.13' python-rpm-macros systemd-rpm-macros"
                             //sh "useradd -d /home/jenkins jenkins"
