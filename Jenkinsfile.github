@@ -237,7 +237,6 @@ pipeline {
                             
                             sh "zypper --non-interactive refresh"
                             sh "zypper --non-interactive in --no-confirm python-rpm-generators 'rpm-build>=4.13' python-rpm-macros systemd-rpm-macros"
-                            sh "useradd -d /home/jenkins jenkins"
                             sh "sudo -E -n -H -u jenkins make python_rpm"
                         }
                     }
