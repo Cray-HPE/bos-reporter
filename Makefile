@@ -28,8 +28,9 @@ BUILD_METADATA ?= "1~development~$(shell git rev-parse --short HEAD)"
 BUILD_ROOT_RELDIR ?= dist/rpmbuild
 NAME ?= bos-reporter
 PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
-PY_VERSION ?= 3.6
+PY_VERSION ?= none
 RPM_ARCH ?= noarch
+SLE_VERSION ?= none
 RPM_NAME ?= python3-bos-reporter
 RPM_VERSION ?= $(shell head -1 .version)
 
@@ -39,8 +40,8 @@ PYLINT_VENV ?= pylint-$(PY_VERSION)
 PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
 SPEC_FILE ?= python-$(NAME).spec
 
-BUILD_BASE_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(RPM_ARCH)
-BUILD_RELDIR ?= $(BUILD_BASE_RELDIR)/$(RPM_NAME)
+BUILD_LABEL ?= $(RPM_ARCH)/$(PY_VERSION)/$(SLE_VERSION)
+BUILD_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(BUILD_LABEL)/$(RPM_NAME)
 BUILD_DIR ?= $(PWD)/$(BUILD_RELDIR)
 
 SOURCE_NAME ?= ${RPM_NAME}-${RPM_VERSION}

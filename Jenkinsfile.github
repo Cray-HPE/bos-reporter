@@ -37,6 +37,7 @@ def runLint() {
 }
 
 def pyImage = 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle-python'
+def sleImage = 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle'
 
 def getRpmName(packageName, pythonVersion) {
     if (pythonVersion == "meta") {
@@ -55,21 +56,21 @@ def getRpmName(packageName, pythonVersion) {
     return "python${pyMajor}${pyMinor}-${packageName}"
 }
 
-def publishRpms(packageName, pyVersion, rpmArch, isStable) {
+def publishRpms(packageName, pyVersion, rpmOs, rpmArch, isStable) {
     def rpm_name = getRpmName(packageName, pyVersion)
-    def build_reldir = "dist/rpmbuild/${rpmArch}/${rpm_name}"
+    def build_reldir = sh(returnStdout: true, script: 'echo \${BUILD_RELDIR}').trim()
     publishCsmRpms(
         arch: "${rpmArch}",
         isStable: env.IS_STABLE,
         component: "${rpm_name}",
-        os: "noos",
+        os: "${rpmOs}",
         pattern: "${build_reldir}/RPMS/${rpmArch}/*.rpm",
     )
     publishCsmRpms(
         arch: "src",
         component: "${rpm_name}",
         isStable: env.IS_STABLE,
-        os: "noos",
+        os: "${rpmOs}",
         pattern: "${build_reldir}/SRPMS/*.rpm",
     )
 }
@@ -193,12 +194,12 @@ pipeline {
                 }
             }
         }
-        stage('Build RPMs') {
+        stage('Build & Publish Python 3.6 RPMs') {
             matrix {
                 axes {
                     axis {
-                        name 'PY_VERSION'
-                        values '3.6', '3.9', '3.10', '3.11', '3.12'
+                        name 'SLE_VERSION'
+                        values '15.2', '15.3', '15.4', '15.5', '15.6'
                     }
                     axis {
                         name 'RPM_ARCH'
@@ -207,13 +208,15 @@ pipeline {
                 }
                 environment {
                     DOCKER_ARCH = sh(returnStdout: true, script: "[ ${RPM_ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
+                    PY_VERSION = "3.6"
+                    DOCKER_BUILD_IMAGE = "${sleImage}:${SLE_VERSION}-${DOCKER_ARCH}"
                 }
                 stages {
                     stage('Setup') {
                         steps {
                             lock('docker-image-pull') {
-                                sh "docker pull --platform linux/${DOCKER_ARCH} ${pyImage}:${PY_VERSION}"
-                                sh "docker tag ${pyImage}:${PY_VERSION} ${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
+                                sh "docker pull --platform linux/${DOCKER_ARCH} ${sleImage}:${SLE_VERSION}"
+                                sh "docker tag ${sleImage}:${SLE_VERSION} ${DOCKER_BUILD_IMAGE}"
                             }
                         }
                     }
@@ -222,7 +225,7 @@ pipeline {
                             docker {
                                 reuseNode true
                                 args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
-                                image "${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
+                                image "${DOCKER_BUILD_IMAGE}"
                             }
                         }
                         environment {
@@ -234,24 +237,106 @@ pipeline {
                             sh "make python_rpm"
                         }
                     }
+                    stage('Publish RPMs') {
+                        agent {
+                            docker {
+                                reuseNode true
+                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
+                                image "${DOCKER_BUILD_IMAGE}"
+                            }
+                        }
+                        steps {
+                            script {
+                                // Publish Python RPMs
+                                def sles_version_parts = "${SLE_VERSION}".tokenize('.')
+                                def sles_major = "${sles_version_parts[0]}"
+                                def sles_minor = "${sles_version_parts[1]}"
+                                publishRpms(env.NAME, "${PY_VERSION}", "sle-${sles_major}sp${sles_minor}", "${RPM_ARCH}", env.IS_STABLE)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        stage('Build & Publish Python 3.9+ RPMs') {
+            matrix {
+                axes {
+                    axis {
+                        name 'DOCKER_TAG'
+                        // This list should be a superset of the Python versions listed in setup.py (or identical)
+                        // Currently Jenkins does not support dynamically reading in the values from the file to use
+                        // as matrix values.
+                        // $pyImage:$PY_VERSION implies the SLES version used for the build
+                        // $pyImage:$PY_VERSION-SLES15.5 dictates the python version and SLES version
+                        values '3.9', '3.10', '3.11-SLES15.5', '3.11-SLES15.6', '3.12'
+                    }
+                    axis {
+                        name 'RPM_ARCH'
+                        values 'x86_64', 'aarch64'
+                    }
+                }
+                environment {
+                    DOCKER_ARCH = sh(returnStdout: true, script: "[ ${RPM_ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
+                    PY_VERSION = sh(script: "echo \${DOCKER_TAG%%-*}", returnStdout: true).trim()
+                    DOCKER_BUILD_IMAGE = "${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
+                }
+                stages {
+                    stage('Setup') {
+                        steps {
+                            lock('docker-image-pull') {
+                                sh "docker pull --platform linux/${DOCKER_ARCH} ${pyImage}:${PY_VERSION}"
+                                sh "docker tag ${pyImage}:${PY_VERSION} ${DOCKER_BUILD_IMAGE}"
+                            }
+                        }
+                    }
+                    stage("Build") {
+                        agent {
+                            docker {
+                                reuseNode true
+                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
+                                image "${DOCKER_BUILD_IMAGE}"
+                            }
+                        }
+                        environment {
+                            SLE_VERSION = sh(returnStdout: true, script: 'awk -F= \'/VERSION_ID/{gsub(/["]/,""); print \$NF}\' /etc/os-release').trim()
+                            RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
+                            BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
+                            SPEC_FILE = "python-${env.NAME}.spec"
+                        }
+                        steps {
+                            sh "make python_rpm"
+                        }
+                    }
+                    stage('Publish RPMs') {
+                        agent {
+                            docker {
+                                reuseNode true
+                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
+                                image "${DOCKER_BUILD_IMAGE}"
+                            }
+                        }
+                        environment {
+                            SLE_VERSION = sh(returnStdout: true, script: 'awk -F= \'/VERSION_ID/{gsub(/["]/,""); print \$NF}\' /etc/os-release').trim()
+                        }
+                        steps {
+                            script {
+                                // Publish Python RPMs
+                                def sles_version_parts = "${SLE_VERSION}".tokenize('.')
+                                def sles_major = "${sles_version_parts[0]}"
+                                def sles_minor = "${sles_version_parts[1]}"
+                                publishRpms(env.NAME, "${PY_VERSION}", "sle-${sles_major}sp${sles_minor}", "${RPM_ARCH}", env.IS_STABLE)
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        stage('Publish RPMs') {
+        stage('Publish meta RPMs') {
             steps {
                 script {
-                    // Publish Python RPMs
-                    def allVersions = [ '3.6', '3.9', '3.10', '3.11', '3.12' ]
-                    def allArches = [ 'x86_64', 'aarch64' ]
-                    allVersions.each() { pyVersion ->
-                        allArches.each() { rpmArch ->                            
-                            publishRpms(env.NAME, "${pyVersion}", "${rpmArch}", env.IS_STABLE)
-                        }
-                    }
-
-                    // Publish meta RPM
-                    publishRpms(env.NAME, "meta", "noarch", env.IS_STABLE)
+                    // Publish meta RPMs
+                    publishRpms(env.NAME, "meta", "noos", "noarch", env.IS_STABLE)
                 }
             }
         }
