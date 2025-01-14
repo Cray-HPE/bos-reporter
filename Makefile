@@ -54,6 +54,7 @@ pymod: pymod_build pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
 
 runbuildprep:
 		./cms_meta_tools/scripts/runBuildPrep.sh
+		chmod 0440 ./jenkins-sudoers
 
 lint:
 		./cms_meta_tools/scripts/runLint.sh
