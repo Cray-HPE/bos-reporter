@@ -23,20 +23,19 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-@Library('cms-meta-tools') _
+@Library('cms-meta-tools@develop') _
 @Library('csm-shared-library') __
 
-def runBuildPrep() {
-    withCredentials([usernamePassword(credentialsId: 'artifactory-algol60-readonly', passwordVariable: 'ARTIFACTORY_PASSWORD', usernameVariable: 'ARTIFACTORY_USERNAME')]) {
-        sh "make runbuildprep"
-    }
-}
-
-def runLint() {
-    sh "make lint"
-}
-
 def pyImage = 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle-python'
+def sleImage = 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle'
+
+def buildRootReldir() {
+    return "dist/rpmbuild"
+}
+
+def getSleVersion() {
+    return sh(returnStdout: true, script: 'awk -F= \'/VERSION_ID/{gsub(/["]/,""); print \$NF}\' /etc/os-release').trim()
+}
 
 def getRpmName(packageName, pythonVersion) {
     if (pythonVersion == "meta") {
@@ -55,22 +54,26 @@ def getRpmName(packageName, pythonVersion) {
     return "python${pyMajor}${pyMinor}-${packageName}"
 }
 
-def publishRpms(packageName, pyVersion, rpmArch, isStable) {
-    def rpm_name = getRpmName(packageName, pyVersion)
-    def build_reldir = "dist/rpmbuild/${rpmArch}/${rpm_name}"
+def buildRelDir(rpmName, rpmOs, rpmArch) {
+    def build_root_reldir = buildRootReldir()
+    return "${build_root_reldir}/${rpmArch}/${rpmOs}/${rpmName}"
+}
+
+def publishRpms(rpmName, rpmOs, rpmArch, buildReldir) {
+    sh "ls -R ${buildReldir}"
     publishCsmRpms(
         arch: "${rpmArch}",
+        component: "${rpmName}",
         isStable: env.IS_STABLE,
-        component: "${rpm_name}",
-        os: "noos",
-        pattern: "${build_reldir}/RPMS/${rpmArch}/*.rpm",
+        os: "${rpmOs}",
+        pattern: "${buildReldir}/RPMS/${rpmArch}/*.rpm",
     )
     publishCsmRpms(
         arch: "src",
-        component: "${rpm_name}",
+        component: "${rpmName}",
         isStable: env.IS_STABLE,
-        os: "noos",
-        pattern: "${build_reldir}/SRPMS/*.rpm",
+        os: "${rpmOs}",
+        pattern: "${buildReldir}/SRPMS/*.rpm",
     )
 }
 
@@ -90,8 +93,14 @@ pipeline {
         NAME = "bos-reporter"
         DESCRIPTION = "Configuration Framework Service Trust Environment"
         IS_STABLE = getBuildIsStable()
-        RPM_OS = "noos"
-        MAX_PY_VERSION = "3.12"
+        PYMOD_BUILD_PY_VERSION = "3.12"
+        BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
+        BUILD_ROOT_RELDIR = buildRootReldir()
+        META_RPM_OS = "noos"
+        META_RPM_NAME = getRpmName(env.NAME, "meta")
+        META_RPM_ARCH = "noarch"
+        META_RPM_SPEC_FILE = "${env.NAME}.spec"
+        META_BUILD_RELDIR = buildRelDir(env.META_RPM_NAME, env.META_RPM_OS, env.META_RPM_ARCH)
     }
 
     stages {
@@ -103,16 +112,15 @@ pipeline {
                 // This function is defined in cms-meta-tools:vars/setVersionFiles.groovy
                 setVersionFiles()
 
-                runBuildPrep()
+                withCredentials([usernamePassword(credentialsId: 'artifactory-algol60-readonly', passwordVariable: 'ARTIFACTORY_PASSWORD', usernameVariable: 'ARTIFACTORY_USERNAME')]) {
+                    sh "make runbuildprep"
+                }
             }
         }
 
         stage ("Prep") {
-            environment {
-                BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-            }
             steps {
-                runLint()
+                sh "make lint"
 
                 // The RPM build metadata can be added outside of the matrix, because it is just based on the
                 // Git commit being built
@@ -127,43 +135,23 @@ pipeline {
             }
         }
 
-        stage("Build Python module & Meta RPM") {
-            parallel {
-                stage("Build Python module") {
-                    agent {
-                        docker {
-                            args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
-                            reuseNode true
-                            image "${pyImage}:${MAX_PY_VERSION}"
-                        }
-                    }
-                    environment {
-                        PY_BIN = getPythonBinaryPath(env.MAX_PY_VERSION)
-                    }
-                    steps {
-                        sh "make pymod_build"
-                    }
-                }
-                stage("Build meta RPM") {
-                    agent {
-                        docker {
-                            args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
-                            reuseNode true
-                            image "${pyImage}:${MAX_PY_VERSION}"
-                        }
-                    }
-                    environment {
-                        RPM_NAME = getRpmName(env.NAME, "meta")
-                        RPM_ARCH = "noarch"
-                        BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-                        SPEC_FILE = "${env.NAME}.spec"
-                    }
-                    steps {
-                        sh "make meta_rpm"
-                    }
+        stage("Build Python module") {
+            agent {
+                docker {
+                    args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
+                    reuseNode true
+                    image "${pyImage}:${PYMOD_BUILD_PY_VERSION}"
                 }
             }
+            environment {
+                PY_VERSION = "${PYMOD_BUILD_PY_VERSION}"
+                PY_PATH = getPythonBinaryPath(env.PYMOD_BUILD_PY_VERSION)
+            }
+            steps {
+                sh "make pymod_build"
+            }
         }
+
         stage('Pylint') {
             matrix {
                 axes {
@@ -180,7 +168,7 @@ pipeline {
                     }
                 }
                 environment {
-                    PY_BIN = getPythonBinaryPath(env.PY_VERSION)
+                    PY_PATH = getPythonBinaryPath(env.PY_VERSION)
                 }
                 stages {
                     stage("Pylint") {
@@ -193,12 +181,14 @@ pipeline {
                 }
             }
         }
-        stage('Build RPMs') {
+        stage('Build & Publish Python RPMs') {
             matrix {
                 axes {
                     axis {
-                        name 'PY_VERSION'
-                        values '3.6', '3.9', '3.10', '3.11', '3.12'
+                        name 'DOCKER_TAG'
+                        // $pyImage:$PY_VERSION implies the SLES version used for the build
+                        // $pyImage:$PY_VERSION-SLES15.5 dictates the python version and SLES version
+                        values '3.6', '3.9', '3.10', '3.11-SLES15.5', '3.11-SLES15.6', '3.12'
                     }
                     axis {
                         name 'RPM_ARCH'
@@ -207,13 +197,17 @@ pipeline {
                 }
                 environment {
                     DOCKER_ARCH = sh(returnStdout: true, script: "[ ${RPM_ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
+                    PY_VERSION = sh(script: "echo \${DOCKER_TAG%%-*}", returnStdout: true).trim()
+                    SOURCE_DOCKER_IMAGE = "${pyImage}:${PY_VERSION}"
+                    DOCKER_BUILD_IMAGE = "${SOURCE_DOCKER_IMAGE}-${DOCKER_ARCH}"
+                    RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
                 }
                 stages {
-                    stage('Setup') {
+                    stage('Pull & tag') {
                         steps {
                             lock('docker-image-pull') {
-                                sh "docker pull --platform linux/${DOCKER_ARCH} ${pyImage}:${PY_VERSION}"
-                                sh "docker tag ${pyImage}:${PY_VERSION} ${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
+                                sh "docker pull --platform linux/${DOCKER_ARCH} ${SOURCE_DOCKER_IMAGE}"
+                                sh "docker tag ${SOURCE_DOCKER_IMAGE} ${DOCKER_BUILD_IMAGE}"
                             }
                         }
                     }
@@ -222,37 +216,62 @@ pipeline {
                             docker {
                                 reuseNode true
                                 args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
-                                image "${pyImage}:${PY_VERSION}-${DOCKER_ARCH}"
+                                image "${DOCKER_BUILD_IMAGE}"
                             }
                         }
                         environment {
-                            RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
-                            BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
-                            SPEC_FILE = "python-${env.NAME}.spec"
+                            PY_PATH = getPythonBinaryPath(env.PY_VERSION)
+                            SLE_VERSION = getSleVersion()
+                            RPM_OS = getSleRpmOs(env.SLE_VERSION)
+                            BUILD_RELDIR = buildRelDir(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH)
                         }
                         steps {
                             sh "make python_rpm"
                         }
                     }
+                    stage ("Publish") {
+                        agent {
+                            docker {
+                                reuseNode true
+                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
+                                image "${DOCKER_BUILD_IMAGE}"
+                            }
+                        }
+                        environment {
+                            SLE_VERSION = getSleVersion()
+                            RPM_OS = getSleRpmOs(env.SLE_VERSION)
+                            BUILD_RELDIR = buildRelDir(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH)
+                        }
+                        steps {
+                            publishRpms(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH, env.BUILD_RELDIR)
+                        }
+                    }
                 }
             }
         }
-
-        stage('Publish RPMs') {
-            steps {
-                script {
-                    // Publish Python RPMs
-                    def allVersions = [ '3.6', '3.9', '3.10', '3.11', '3.12' ]
-                    def allArches = [ 'x86_64', 'aarch64' ]
-                    allVersions.each() { pyVersion ->
-                        allArches.each() { rpmArch ->                            
-                            publishRpms(env.NAME, "${pyVersion}", "${rpmArch}", env.IS_STABLE)
-                        }
-                    }
-
-                    // Publish meta RPM
-                    publishRpms(env.NAME, "meta", "noarch", env.IS_STABLE)
+        stage('Build meta RPMs') {
+            agent {
+                docker {
+                    args '-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc'
+                    reuseNode true
+                    image "${sleImage}:latest"
                 }
+            }
+            environment {
+                RPM_OS = "${env.META_RPM_OS}"
+                RPM_NAME = "${env.META_RPM_NAME}"
+                RPM_ARCH = "${env.META_RPM_ARCH}"
+                SPEC_FILE = "${env.META_RPM_SPEC_FILE}"
+                BUILD_RELDIR = "${env.META_BUILD_RELDIR}"
+            }
+            steps {
+                sh "make meta_rpm"
+            }
+        }
+        stage('Publish meta RPMs') {
+            steps {
+                // Publish meta RPMs
+                publishRpms(env.META_RPM_NAME, env.META_RPM_OS, env.META_RPM_ARCH, env.META_BUILD_RELDIR)
             }
         }
     }
