@@ -61,6 +61,7 @@ def buildRelDir(rpmName, rpmOs, rpmArch) {
 
 def publishRpms(rpmName, rpmOs, rpmArch, buildReldir) {
     sh "ls -R ${buildReldir}"
+    echo "${rpmName} ${rpmOs} ${rpmArch}"
     publishCsmRpms(
         arch: "${rpmArch}",
         component: "${rpmName}",
@@ -198,7 +199,7 @@ pipeline {
                 environment {
                     DOCKER_ARCH = sh(returnStdout: true, script: "[ ${RPM_ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
                     PY_VERSION = sh(script: "echo \${DOCKER_TAG%%-*}", returnStdout: true).trim()
-                    SOURCE_DOCKER_IMAGE = "${pyImage}:${PY_VERSION}"
+                    SOURCE_DOCKER_IMAGE = "${pyImage}:${DOCKER_TAG}"
                     DOCKER_BUILD_IMAGE = "${SOURCE_DOCKER_IMAGE}-${DOCKER_ARCH}"
                     RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
                 }
