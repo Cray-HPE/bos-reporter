@@ -24,6 +24,8 @@
 # If you wish to perform a local build, you will need to clone or copy the contents of the
 # cms-meta-tools repo to ./cms_meta_tools
 
+GENERIC_PY_RPM_SOURCE_TAR := python-bos-reporter-source.tar
+GENERIC_PY_RPM_SOURCE_RELDIR := python_bos_reporter_rpm_source
 BUILD_METADATA ?= '1~development~$(shell git rev-parse --short HEAD)'
 BUILD_ROOT_RELDIR ?= dist/rpmbuild
 NAME ?= bos-reporter
@@ -64,7 +66,21 @@ lint:
 		./cms_meta_tools/scripts/runLint.sh
 
 rpm_pre_clean:
-		rm -rf $(BUILD_ROOT_RELDIR)
+		rm -rf $(BUILD_ROOT_RELDIR) $(GENERIC_PY_RPM_SOURCE_TAR) $(GENERIC_PY_RPM_SOURCE_RELDIR)
+		tar \
+			--exclude '.git*' \
+			--exclude './.tmp.*' \
+			--exclude ./bos_reporter.egg-info \
+			--exclude ./build \
+			--exclude ./cms_meta_tools \
+			--exclude ./dist \
+			--exclude $(GENERIC_PY_SOURCE_TGZ) \
+			--exclude './pylint-*' \
+			--exclude ./$(META_SPEC_FILE) \
+			-cvf $(GENERIC_PY_SOURCE_TAR) .
+		mkdir -pv $(GENERIC_PY_RPM_SOURCE_RELDIR)
+		tar -C $(GENERIC_PY_RPM_SOURCE_RELDIR) -xvf $(GENERIC_PY_SOURCE_TAR)
+		rm -v $(GENERIC_PY_SOURCE_TAR)
 
 rpm_prepare:
 		mkdir -pv $(PWD)/$(BUILD_RELDIR)/RPMS/$(RPM_ARCH) $(PWD)/$(BUILD_RELDIR)/SRPMS
@@ -74,15 +90,7 @@ rpm_prepare:
 rpm_python_package_source:
 		touch $(SOURCE_PATH)
 		tar --transform 'flags=r;s,^,/$(SOURCE_NAME)/,' \
-			--exclude '.git*' \
-			--exclude './.tmp.*' \
-			--exclude ./bos_reporter.egg-info \
-			--exclude ./build \
-			--exclude ./cms_meta_tools \
-			--exclude ./dist \
-			--exclude $(SOURCE_BASENAME) \
-			--exclude './pylint-*' \
-			--exclude ./$(META_SPEC_FILE) \
+			-C $(GENERIC_PY_RPM_SOURCE_RELDIR)
 			-cvjf $(SOURCE_PATH) .
 
 rpm_meta_build_source:
