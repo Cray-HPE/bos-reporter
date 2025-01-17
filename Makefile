@@ -74,7 +74,7 @@ rpm_pre_clean:
 			--exclude ./build \
 			--exclude ./cms_meta_tools \
 			--exclude ./dist \
-			--exclude $(GENERIC_PY_SOURCE_TGZ) \
+			--exclude $(GENERIC_PY_RPM_SOURCE_TAR) \
 			--exclude './pylint-*' \
 			--exclude ./$(META_SPEC_FILE) \
 			-cvf $(GENERIC_PY_RPM_SOURCE_TAR) .
