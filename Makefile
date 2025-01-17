@@ -90,7 +90,7 @@ rpm_prepare:
 rpm_python_package_source:
 		touch $(SOURCE_PATH)
 		tar --transform 'flags=r;s,^,/$(SOURCE_NAME)/,' \
-			-C $(GENERIC_PY_RPM_SOURCE_RELDIR)
+			-C $(GENERIC_PY_RPM_SOURCE_RELDIR) \
 			-cvjf $(SOURCE_PATH) .
 
 rpm_meta_build_source:
