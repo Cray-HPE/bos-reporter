@@ -77,10 +77,10 @@ rpm_pre_clean:
 			--exclude $(GENERIC_PY_SOURCE_TGZ) \
 			--exclude './pylint-*' \
 			--exclude ./$(META_SPEC_FILE) \
-			-cvf $(GENERIC_PY_SOURCE_TAR) .
+			-cvf $(GENERIC_PY_RPM_SOURCE_TAR) .
 		mkdir -pv $(GENERIC_PY_RPM_SOURCE_RELDIR)
-		tar -C $(GENERIC_PY_RPM_SOURCE_RELDIR) -xvf $(GENERIC_PY_SOURCE_TAR)
-		rm -v $(GENERIC_PY_SOURCE_TAR)
+		tar -C $(GENERIC_PY_RPM_SOURCE_RELDIR) -xvf $(GENERIC_PY_RPM_SOURCE_TAR)
+		rm -v $(GENERIC_PY_RPM_SOURCE_TAR)
 
 rpm_prepare:
 		mkdir -pv $(PWD)/$(BUILD_RELDIR)/RPMS/$(RPM_ARCH) $(PWD)/$(BUILD_RELDIR)/SRPMS
