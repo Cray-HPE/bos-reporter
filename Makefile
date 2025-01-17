@@ -65,8 +65,10 @@ runbuildprep:
 lint:
 		./cms_meta_tools/scripts/runLint.sh
 
-rpm_pre_clean:
-		rm -rf $(BUILD_ROOT_RELDIR) $(GENERIC_PY_RPM_SOURCE_TAR) $(GENERIC_PY_RPM_SOURCE_RELDIR)
+pre_clean:
+		rm -rf $(BUILD_ROOT_RELDIR) dist $(GENERIC_PY_RPM_SOURCE_TAR) $(GENERIC_PY_RPM_SOURCE_RELDIR)
+
+python_rpms_prepare:
 		tar \
 			--exclude '.git*' \
 			--exclude './.tmp.*' \

@@ -132,7 +132,7 @@ pipeline {
                 // Just using this as a means to generate the netrc file that we need
                 getDockerBuildArgs()
 
-                sh "make rpm_pre_clean"
+                sh "make pre_clean"
             }
         }
 
@@ -152,7 +152,6 @@ pipeline {
                 sh "make pymod_build"
             }
         }
-
         stage('Pylint') {
             matrix {
                 axes {
@@ -182,6 +181,13 @@ pipeline {
                 }
             }
         }
+
+        stage ("Python RPMs Build Prep") {
+            steps {
+                sh "make python_rpms_prepare"
+            }
+        }
+
         stage('Build & Publish Python RPMs') {
             matrix {
                 axes {
