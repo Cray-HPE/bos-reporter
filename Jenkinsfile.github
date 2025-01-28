@@ -23,7 +23,7 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-@Library('cms-meta-tools@develop') _
+@Library('cms-meta-tools@rpm') _
 @Library('csm-shared-library') __
 
 def pyImage = 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle-python'
@@ -38,10 +38,7 @@ def getSleVersion() {
 }
 
 def getRpmName(packageName, pythonVersion) {
-    if (pythonVersion == "meta") {
-        return "${packageName}"
-    }
-    // If it is not meta, then it should be 'major.minor'
+    // Python version should be 'major.minor'
     if (!isValidMajorDotMinor(pythonVersion)) {
         error("Invalid Python version specified: ${pythonVersion}")
     }
@@ -95,13 +92,15 @@ pipeline {
         DESCRIPTION = "Configuration Framework Service Trust Environment"
         IS_STABLE = getBuildIsStable()
         PYMOD_BUILD_PY_VERSION = "3.12"
-        BUILD_METADATA = getRpmRevision(isStable: env.IS_STABLE)
         BUILD_ROOT_RELDIR = buildRootReldir()
         META_RPM_OS = "noos"
-        META_RPM_NAME = getRpmName(env.NAME, "meta")
+        META_RPM_NAME = "${env.NAME}"
         META_RPM_ARCH = "noarch"
         META_RPM_SPEC_FILE = "${env.NAME}.spec"
         META_BUILD_RELDIR = buildRelDir(env.META_RPM_NAME, env.META_RPM_OS, env.META_RPM_ARCH)
+        SPEC_FILE = "python-${env.META_RPM_SPEC_FILE}"
+        PIP_INSTALL_ARGS = "--trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt"
+        GENERIC_PY_RPM_SOURCE_TAR = "python-bos-reporter-source.tar"
     }
 
     stages {
@@ -125,14 +124,13 @@ pipeline {
 
                 // The RPM build metadata can be added outside of the matrix, because it is just based on the
                 // Git commit being built
-                echo "RPM build metadata is ${env.BUILD_METADATA}"
-                runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/bos-reporter.spec")
-                runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/python-bos-reporter.spec")
+                runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/${env.META_RPM_SPEC_FILE}")
+                runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/${env.SPEC_FILE}")
 
                 // Just using this as a means to generate the netrc file that we need
                 getDockerBuildArgs()
 
-                sh "make rpm_pre_clean"
+                sh "make pre_clean"
             }
         }
 
@@ -152,7 +150,6 @@ pipeline {
                 sh "make pymod_build"
             }
         }
-
         stage('Pylint') {
             matrix {
                 axes {
@@ -182,6 +179,14 @@ pipeline {
                 }
             }
         }
+
+        stage ("Python RPMs Build Prep") {
+            steps {
+                sh "make python_rpms_prepare"
+                //copyCMTFiles(env.TMPDIR, "build_rpm.sh")
+            }
+        }
+
         stage('Build & Publish Python RPMs') {
             matrix {
                 axes {
@@ -202,6 +207,8 @@ pipeline {
                     SOURCE_DOCKER_IMAGE = "${pyImage}:${DOCKER_TAG}"
                     DOCKER_BUILD_IMAGE = "${SOURCE_DOCKER_IMAGE}-${DOCKER_ARCH}"
                     RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
+                    RPM_VERSION = sh(script: "head -1 .version", returnStdout: true).trim()
+                    RPM_RELEASE = sh(script: "head -1 .rpm_release", returnStdout: true).trim()
                 }
                 stages {
                     stage('Pull & tag') {
@@ -221,13 +228,19 @@ pipeline {
                             }
                         }
                         environment {
-                            PY_PATH = getPythonBinaryPath(env.PY_VERSION)
                             SLE_VERSION = getSleVersion()
                             RPM_OS = getSleRpmOs(env.SLE_VERSION)
                             BUILD_RELDIR = buildRelDir(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH)
                         }
                         steps {
-                            sh "make python_rpm"
+                            buildCsmRpms(
+                                name: env.RPM_NAME,
+                                version: RPM_VERSION,
+                                sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
+                                specFileBasename: env.SPEC_FILE,
+                                buildReldir: env.BUILD_RELDIR,
+                                arch: env.RPM_ARCH,
+                            )
                         }
                     }
                     stage ("Publish") {
@@ -257,13 +270,6 @@ pipeline {
                     reuseNode true
                     image "${sleImage}:latest"
                 }
-            }
-            environment {
-                RPM_OS = "${env.META_RPM_OS}"
-                RPM_NAME = "${env.META_RPM_NAME}"
-                RPM_ARCH = "${env.META_RPM_ARCH}"
-                SPEC_FILE = "${env.META_RPM_SPEC_FILE}"
-                BUILD_RELDIR = "${env.META_BUILD_RELDIR}"
             }
             steps {
                 sh "make meta_rpm"

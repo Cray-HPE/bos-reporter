@@ -1,4 +1,4 @@
-# Copyright 2024 Hewlett Packard Enterprise Development LP
+# Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -20,13 +20,13 @@
 #
 # (MIT License)
 
-Name: %(echo ${RPM_NAME})
+Name: %(echo ${META_RPM_NAME})
 License: MIT
 Summary: Metapackage to install the Python bos-reporter service
 Group: System/Management
-Version: %(cat .version)
-Release: %(cat .rpm_release)
-BuildArch: %(echo ${RPM_ARCH})
+Version: %(echo ${RPM_VERSION})
+Release: %(echo ${RPM_RELEASE})
+BuildArch: %(echo ${META_RPM_ARCH})
 Vendor: HPE
 Requires: python-bos-reporter == %{version}
 

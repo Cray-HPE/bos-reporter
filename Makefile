@@ -24,37 +24,37 @@
 # If you wish to perform a local build, you will need to clone or copy the contents of the
 # cms-meta-tools repo to ./cms_meta_tools
 
-BUILD_METADATA ?= '1~development~$(shell git rev-parse --short HEAD)'
+GENERIC_PY_RPM_SOURCE_TAR ?= python-bos-reporter-source.tar
 BUILD_ROOT_RELDIR ?= dist/rpmbuild
 NAME ?= bos-reporter
-PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
-PY_VERSION ?= none
-RPM_ARCH ?= noarch
-RPM_OS ?= noos
-SLE_VERSION ?= none
-RPM_NAME ?= python3-bos-reporter
+RPM_NAME ?= python3-$(NAME)
+META_RPM_NAME ?= $(NAME)
+
 RPM_VERSION ?= $(shell head -1 .version)
+RPM_RELEASE ?= $(shell head -1 .rpm_release)
+
+PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
+PY_VERSION ?= 3.12
+RPM_ARCH ?= x86_64
+RPM_OS ?= sle15-sp6
+SLE_VERSION ?= 15.6
+
+SPEC_FILE ?= python-$(NAME).spec
+META_RPM_SPEC_FILE ?= $(NAME).spec
+META_RPM_OS = "noos"
+META_RPM_ARCH = "noarch"
 
 PY_PATH ?= /usr/bin/python$(PY_VERSION)
 PY_BASENAME := $(shell basename $(PY_PATH))
 
 PYLINT_VENV ?= pylint-$(PY_VERSION)
 PYLINT_VENV_PYBIN ?= $(PYLINT_VENV)/bin/python3
-SPEC_FILE ?= python-$(NAME).spec
-META_SPEC_FILE := $(NAME).spec
 
-BUILD_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(RPM_ARCH)/$(RPM_OS)/$(RPM_NAME)
-
+META_BUILD_RELDIR ?= $(BUILD_ROOT_RELDIR)/$(META_RPM_ARCH)/$(META_RPM_OS)/$(META_RPM_NAME)
 TMPDIR := $(shell mktemp -d $(PWD)/.tmp.$(RPM_ARCH).$(PY_VERSION).$(SLE_VERSION).XXX)
+META_BUILD_DIR ?= $(TMPDIR)/$(META_BUILD_RELDIR)
 
-BUILD_DIR ?= $(TMPDIR)/$(BUILD_RELDIR)
-
-SOURCE_NAME ?= ${RPM_NAME}-${RPM_VERSION}
-SOURCE_BASENAME := ${SOURCE_NAME}.tar.bz2
-SOURCE_PATH := $(BUILD_DIR)/SOURCES/${SOURCE_BASENAME}
-
-python_rpm: rpm_prepare rpm_python_package_source rpm_python_build_source rpm_build rpm_post_clean
-meta_rpm: rpm_prepare rpm_meta_build_source rpm_build rpm_post_clean
+meta_rpm: meta_rpm_prepare meta_rpm_build_source meta_rpm_build meta_rpm_post_clean
 pymod: pymod_build pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
 
 runbuildprep:
@@ -63,71 +63,66 @@ runbuildprep:
 lint:
 		./cms_meta_tools/scripts/runLint.sh
 
-rpm_pre_clean:
-		rm -rf $(BUILD_ROOT_RELDIR)
+pre_clean:
+		rm -rf dist $(GENERIC_PY_RPM_SOURCE_TAR)
 
-rpm_prepare:
-		mkdir -pv $(PWD)/$(BUILD_RELDIR)/RPMS/$(RPM_ARCH) $(PWD)/$(BUILD_RELDIR)/SRPMS
-		mkdir -pv $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
-		cp -v $(SPEC_FILE) $(BUILD_DIR)/SPECS/
-
-rpm_python_package_source:
-		touch $(SOURCE_PATH)
-		tar --transform 'flags=r;s,^,/$(SOURCE_NAME)/,' \
+python_rpms_prepare:
+		tar \
 			--exclude '.git*' \
 			--exclude './.tmp.*' \
 			--exclude ./bos_reporter.egg-info \
 			--exclude ./build \
 			--exclude ./cms_meta_tools \
 			--exclude ./dist \
-			--exclude $(SOURCE_BASENAME) \
+            --exclude ./$(BUILD_ROOT_RELDIR) \
+			--exclude $(GENERIC_PY_RPM_SOURCE_TAR) \
 			--exclude './pylint-*' \
-			--exclude ./$(META_SPEC_FILE) \
-			-cvjf $(SOURCE_PATH) .
+			--exclude ./$(META_RPM_SPEC_FILE) \
+			-cvf $(GENERIC_PY_RPM_SOURCE_TAR) .
 
-rpm_meta_build_source:
-		uname -a
-		cp -v .version .rpm_release $(SPEC_FILE) $(TMPDIR)
-		cd '$(TMPDIR)' && \
-		BUILD_METADATA='$(BUILD_METADATA)' \
+python_rpm_build:
+		RPM_NAME='$(RPM_NAME)' \
+		RPM_VERSION='$(RPM_VERSION)' \
+		RPM_RELEASE='$(RPM_RELEASE)' \
+		RPM_ARCH='$(RPM_ARCH)' \
+		RPM_OS='$(RPM_OS)' \
+		PY_VERSION='$(PY_VERSION)' \
 		PIP_INSTALL_ARGS='$(PIP_INSTALL_ARGS)' \
-		PYTHON_BIN=$(PY_BASENAME) \
-		RPM_ARCH=$(RPM_ARCH) \
-		RPM_NAME=$(RPM_NAME) \
-		SOURCE_BASENAME='$(SOURCE_BASENAME)' \
-		rpmbuild -bs $(SPEC_FILE) --target $(RPM_ARCH) --define '_topdir $(BUILD_DIR)'
-		cp -v $(BUILD_DIR)/SRPMS/*.rpm $(PWD)/$(BUILD_RELDIR)/SRPMS
+		./cms_meta_tools/resources/build_rpm.sh \
+			--arch '$(RPM_ARCH)' \
+			'$(BUILD_RELDIR)' '$(RPM_NAME)' '$(RPM_VERSION)]' '$(GENERIC_PY_RPM_SOURCE_TAR)' '$(SPEC_FILE)'
 
-rpm_python_build_source:
+meta_rpm_prepare:
+		mkdir -pv \
+			$(PWD)/$(META_BUILD_RELDIR)/RPMS/$(META_RPM_ARCH) \
+			$(PWD)/$(META_BUILD_RELDIR)/SRPMS \
+			$(META_BUILD_DIR)/SPECS \
+			$(META_BUILD_DIR)/SOURCES
+		cp -v $(META_RPM_SPEC_FILE) $(META_BUILD_DIR)/SPECS/
+
+meta_rpm_build_source:
 		uname -a
-		tar -C '$(TMPDIR)' --transform 'flags=r;s,^/$(SOURCE_NAME)/,,' -xvf '$(SOURCE_PATH)'
+		cp -v $(META_RPM_SPEC_FILE) $(TMPDIR)
 		cd '$(TMPDIR)' && \
-		BUILD_METADATA='$(BUILD_METADATA)' \
-		PIP_INSTALL_ARGS='$(PIP_INSTALL_ARGS)' \
-		PYTHON_BIN=$(PY_BASENAME) \
-		RPM_ARCH=$(RPM_ARCH) \
-		RPM_NAME=$(RPM_NAME) \
-		SOURCE_BASENAME='$(SOURCE_BASENAME)' \
-		rpmbuild -ts $(SOURCE_PATH) --target $(RPM_ARCH) --define '_topdir $(BUILD_DIR)'
-		cp -v $(BUILD_DIR)/SRPMS/*.rpm $(PWD)/$(BUILD_RELDIR)/SRPMS
+		RPM_VERSION='$(RPM_VERSION)' \
+		RPM_RELEASE='$(RPM_RELEASE)' \
+		META_RPM_ARCH=$(META_RPM_ARCH) \
+		META_RPM_NAME=$(META_RPM_NAME) \
+		rpmbuild -bs $(META_RPM_SPEC_FILE) --target $(META_RPM_ARCH) --define '_topdir $(META_BUILD_DIR)'
+		cp -v $(META_BUILD_DIR)/SRPMS/*.rpm $(PWD)/$(META_BUILD_RELDIR)/SRPMS
 
-rpm_build:
+meta_rpm_build:
 		uname -a
 		cd '$(TMPDIR)' && \
-		BUILD_METADATA='$(BUILD_METADATA)' \
-		PIP_INSTALL_ARGS='$(PIP_INSTALL_ARGS)' \
-		PYTHON_BIN=$(PY_BASENAME) \
-		RPM_ARCH=$(RPM_ARCH) \
-		RPM_NAME=$(RPM_NAME) \
-		SOURCE_BASENAME='$(SOURCE_BASENAME)' \
-		rpmbuild -ba $(SPEC_FILE) --target $(RPM_ARCH) --define '_topdir $(BUILD_DIR)'
-		cp -v $(BUILD_DIR)/RPMS/$(RPM_ARCH)/*.rpm $(PWD)/$(BUILD_RELDIR)/RPMS/$(RPM_ARCH)
+		RPM_VERSION='$(RPM_VERSION)' \
+		RPM_RELEASE='$(RPM_RELEASE)' \
+		META_RPM_ARCH=$(META_RPM_ARCH) \
+		META_RPM_NAME=$(META_RPM_NAME) \
+		rpmbuild -ba $(META_RPM_SPEC_FILE) --target $(META_RPM_ARCH) --define '_topdir $(META_BUILD_DIR)'
+		cp -v $(META_BUILD_DIR)/RPMS/$(META_RPM_ARCH)/*.rpm $(PWD)/$(META_BUILD_RELDIR)/RPMS/$(META_RPM_ARCH)
 
-rpm_post_clean:
+meta_rpm_post_clean:
 		rm -rvf '$(TMPDIR)'
-
-rpm_get_build_reldir:
-		echo -n '$(BUILD_RELDIR)'
 
 pymod_build:
 		$(PY_PATH) --version
