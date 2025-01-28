@@ -25,16 +25,16 @@
 
 # Define which Python flavors python-rpm-macros will use (this can be a list).
 # https://github.com/openSUSE/python-rpm-macros#terminology
-%define pythons %(echo ${PYTHON_BIN})
 %define py_version %(echo ${PY_VERSION})
+%define pythons python%{py_version}
 %define py_minor_version %(echo ${PY_VERSION} | cut -d. -f2)
 
 Name: %(echo ${RPM_NAME})
 License: MIT
 Summary: A system service which reports information about a booted node state
 Group: System/Management
-Version: %(cat .version)
-Release: %(cat .rpm_release)
+Version: %(echo ${RPM_VERSION})
+Release: %(echo ${RPM_RELEASE})
 Source: %(echo ${SOURCE_BASENAME})
 BuildArch: %(echo ${RPM_ARCH})
 Provides: python-bos-reporter == %{version}
@@ -81,6 +81,7 @@ BOS' Boot Artifact ID for a node throughout its booted life.
 %build
 
 %install
+%python_exec --version
 # Create our virtualenv
 %python_exec -m venv %{buildroot}%{install_python_dir}
 
@@ -88,12 +89,12 @@ BOS' Boot Artifact ID for a node throughout its booted life.
 %{buildroot}%{install_python_dir}/bin/python3 -m pip install %(echo ${PIP_INSTALL_ARGS}) bos_reporter*.whl --disable-pip-version-check --no-cache
 %{buildroot}%{install_python_dir}/bin/python3 -m pip list --format freeze
 
-mkdir -p ${RPM_BUILD_ROOT}%{_systemdsvcdir}
+mkdir -p %{buildroot}%{_systemdsvcdir}
 install -m 644 etc/bos-reporter.service %{buildroot}%{_systemdsvcdir}/bos-reporter.service
 
 # Add symlink in /opt/cray/csm/scripts/bos
-install -d -m 755 ${RPM_BUILD_ROOT}/opt/cray/csm/scripts/bos
-pushd ${RPM_BUILD_ROOT}/opt/cray/csm/scripts/bos
+install -d -m 755 %{buildroot}/opt/cray/csm/scripts/bos
+pushd %{buildroot}/opt/cray/csm/scripts/bos
 ln -s ../../../../..%{install_python_dir}/bin/bos_reporter bos_reporter
 popd
 
@@ -106,11 +107,11 @@ find %{buildroot}%{install_python_dir} -type d -name __pycache__ -exec rm -rvf {
 # Fix the virtualenv activation script, ensure VIRTUAL_ENV points to the installed location on the system.
 find %{buildroot}%{install_python_dir}/bin -type f | xargs -t -i sed -i 's:%{buildroot}%{install_python_dir}:%{install_python_dir}:g' {}
 
-find %{buildroot}%{install_dir} | sed 's:'${RPM_BUILD_ROOT}'::' | tee -a INSTALLED_FILES
+find %{buildroot}%{install_dir} | sed 's:'%{buildroot}'::' | tee -a INSTALLED_FILES
 echo /opt/cray/csm/scripts/bos/bos_reporter | tee -a INSTALLED_FILES
 echo /opt/cray/csm/scripts/bos | tee -a INSTALLED_FILES
 echo %{_systemdsvcdir}/bos-reporter.service | tee -a INSTALLED_FILES
-cat INSTALLED_FILES | xargs -i sh -c 'test -L $RPM_BUILD_ROOT{} -o -f $RPM_BUILD_ROOT{} && echo {} || echo %dir {}' | sort -u > FILES
+cat INSTALLED_FILES | xargs -i sh -c 'test -L %{buildroot}{} -o -f %{buildroot}{} && echo {} || echo %dir {}' | sort -u > FILES
 
 %clean
 rm -rf %{buildroot}
