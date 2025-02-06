@@ -233,14 +233,16 @@ pipeline {
                             BUILD_RELDIR = buildRelDir(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH)
                         }
                         steps {
-                            buildCsmRpms(
-                                name: env.RPM_NAME,
-                                version: RPM_VERSION,
-                                sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
-                                specFileBasename: env.SPEC_FILE,
-                                buildReldir: env.BUILD_RELDIR,
-                                arch: env.RPM_ARCH,
-                            )
+                            script {
+                                buildCsmRpms(
+                                    name: env.RPM_NAME,
+                                    version: RPM_VERSION,
+                                    sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
+                                    specFileBasename: env.SPEC_FILE,
+                                    buildReldir: env.BUILD_RELDIR,
+                                    arch: env.RPM_ARCH,
+                                )
+                            }
                         }
                     }
                     stage ("Publish") {
