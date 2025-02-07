@@ -33,7 +33,7 @@ META_RPM_NAME ?= $(NAME)
 RPM_VERSION ?= $(shell head -1 .version)
 RPM_RELEASE ?= $(shell head -1 .rpm_release)
 
-PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt
+PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt --no-cache
 PY_VERSION ?= 3.12
 RPM_ARCH ?= x86_64
 RPM_OS ?= sle15-sp6
@@ -133,7 +133,7 @@ pymod_build:
 
 pymod_pylint_setup:
 		$(PY_PATH) -m venv $(PYLINT_VENV)
-		$(PYLINT_VENV_PYBIN) -m pip install --upgrade $(PIP_INSTALL_ARGS) pip --no-cache
+		$(PYLINT_VENV_PYBIN) -m pip install --upgrade $(PIP_INSTALL_ARGS) pip
 		$(PYLINT_VENV_PYBIN) -m pip install --disable-pip-version-check $(PIP_INSTALL_ARGS) pylint bos_reporter*.whl
 		$(PYLINT_VENV_PYBIN) -m pip list --format freeze
 

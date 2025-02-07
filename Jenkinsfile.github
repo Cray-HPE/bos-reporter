@@ -183,7 +183,6 @@ pipeline {
         stage ("Python RPMs Build Prep") {
             steps {
                 sh "make python_rpms_prepare"
-                //copyCMTFiles(env.TMPDIR, "build_rpm.sh")
             }
         }
 
