@@ -42,3 +42,5 @@ Requires: python-bos-reporter == %{version}
 rm -rf %{buildroot}
 
 %files
+
+%changelog

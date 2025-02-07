@@ -63,6 +63,10 @@ Obsoletes: python39-bos-reporter <= %{version}
 %if %{py_minor_version} > 10
 Obsoletes: python310-bos-reporter <= %{version}
 
+%if %{py_minor_version} > 11
+Obsoletes: python311-bos-reporter <= %{version}
+
+%endif # %{py_minor_version} > 11
 %endif # %{py_minor_version} > 10
 %endif # %{py_minor_version} > 9
 %endif # %{py_minor_version} > 6
@@ -82,11 +86,13 @@ BOS' Boot Artifact ID for a node throughout its booted life.
 
 %install
 %python_exec --version
+# Upgrade install tools
+%python_exec -m pip install --upgrade --user pip build setuptools wheel %(echo ${PIP_INSTALL_ARGS})
 # Create our virtualenv
 %python_exec -m venv %{buildroot}%{install_python_dir}
 
-%{buildroot}%{install_python_dir}/bin/python3 -m pip install --upgrade %(echo ${PIP_INSTALL_ARGS}) pip --no-cache
-%{buildroot}%{install_python_dir}/bin/python3 -m pip install %(echo ${PIP_INSTALL_ARGS}) bos_reporter*.whl --disable-pip-version-check --no-cache
+%{buildroot}%{install_python_dir}/bin/python3 -m pip install --upgrade %(echo ${PIP_INSTALL_ARGS}) pip
+%{buildroot}%{install_python_dir}/bin/python3 -m pip install %(echo ${PIP_INSTALL_ARGS}) bos_reporter*.whl --disable-pip-version-check
 %{buildroot}%{install_python_dir}/bin/python3 -m pip list --format freeze
 
 mkdir -p %{buildroot}%{_systemdsvcdir}
@@ -99,7 +105,7 @@ ln -s ../../../../..%{install_python_dir}/bin/bos_reporter bos_reporter
 popd
 
 # Remove build tools to decrease the virtualenv size.
-%{buildroot}%{install_python_dir}/bin/python3 -m pip uninstall -y pip setuptools
+%{buildroot}%{install_python_dir}/bin/python3 -m pip uninstall -y pip setuptools wheel
 
 # Remove __pycache__ directories  to decrease the virtualenv size.
 find %{buildroot}%{install_python_dir} -type d -name __pycache__ -exec rm -rvf {} \; -prune
