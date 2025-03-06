@@ -99,7 +99,7 @@ pipeline {
         META_RPM_SPEC_FILE = "${env.NAME}.spec"
         META_BUILD_RELDIR = buildRelDir(env.META_RPM_NAME, env.META_RPM_OS, env.META_RPM_ARCH)
         SPEC_FILE = "python-${env.META_RPM_SPEC_FILE}"
-        PIP_INSTALL_ARGS = "--trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt"
+        PIP_INSTALL_ARGS = "--trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt --no-cache"
         GENERIC_PY_RPM_SOURCE_TAR = "python-bos-reporter-source.tar"
     }
 
@@ -155,7 +155,7 @@ pipeline {
                 axes {
                     axis {
                         name 'PY_VERSION'
-                        values '3.6', '3.9', '3.10', '3.11', '3.12'
+                        values '3.6', '3.9', '3.10', '3.11', '3.12', '3.13'
                     }
                 }
                 agent {
@@ -193,7 +193,7 @@ pipeline {
                         name 'DOCKER_TAG'
                         // $pyImage:$PY_VERSION implies the SLES version used for the build
                         // $pyImage:$PY_VERSION-SLES15.5 dictates the python version and SLES version
-                        values '3.6', '3.9', '3.10', '3.11-SLES15.5', '3.11-SLES15.6', '3.12'
+                        values '3.10', '3.11-SLES15.5', '3.11-SLES15.6','3.11-SLES15.7', '3.12', '3.13'
                     }
                     axis {
                         name 'RPM_ARCH'
