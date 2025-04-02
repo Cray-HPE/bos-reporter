@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Dependencies
-
+- Bump `dangoslen/dependabot-changelog-helper` from 3 to 4 ([#2](https://github.com/Cray-HPE/bos-reporter/pull/2))
+- Bump `tj-actions/changed-files` from 45 to 46 ([#8](https://github.com/Cray-HPE/bos-reporter/pull/8))
 - Bump `dangoslen/dependabot-changelog-helper` from 3 to 4 ([#2](https://github.com/Cray-HPE/bos-reporter/pull/2))
 
 ## [3.3.2] - 2025/03/06
