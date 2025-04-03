@@ -96,6 +96,13 @@ def initPrep() {
     getDockerBuildArgs()
 }
 
+def dockerPullAndTag(dockerArch, sourceDockerImage, dockerBuildImage) {
+    lock('docker-image-pull') {
+        sh "docker pull --platform linux/${dockerArch} ${sourceDockerImage}"
+        sh "docker tag ${sourceDockerImage} ${dockerBuildImage}"
+    }
+}
+
 pipeline {
     agent {
         label "metal-gcp-builder"
@@ -199,8 +206,7 @@ pipeline {
                 environment {
                     DOCKER_ARCH = sh(returnStdout: true, script: "[ ${RPM_ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
                     PY_VERSION = sh(script: "echo \${DOCKER_TAG%%-*}", returnStdout: true).trim()
-                    SOURCE_DOCKER_IMAGE = "${pyImage}:${DOCKER_TAG}"
-                    DOCKER_BUILD_IMAGE = "${SOURCE_DOCKER_IMAGE}-${DOCKER_ARCH}"
+                    DOCKER_BUILD_IMAGE = "${pyImage}:${DOCKER_TAG}-${DOCKER_ARCH}"
                     RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
                     RPM_VERSION = sh(script: "head -1 .version", returnStdout: true).trim()
                     RPM_RELEASE = sh(script: "head -1 .rpm_release", returnStdout: true).trim()
@@ -208,10 +214,7 @@ pipeline {
                 stages {
                     stage('Pull & tag') {
                         steps {
-                            lock('docker-image-pull') {
-                                sh "docker pull --platform linux/${DOCKER_ARCH} ${SOURCE_DOCKER_IMAGE}"                                
-                            }
-                            sh "docker tag ${SOURCE_DOCKER_IMAGE} ${DOCKER_BUILD_IMAGE}"
+                            dockerPullAndTag(env.DOCKER_ARCH, "${pyImage}:${DOCKER_TAG}", env.DOCKER_BUILD_IMAGE)
                         }
                     }
                     stage("Build") {
