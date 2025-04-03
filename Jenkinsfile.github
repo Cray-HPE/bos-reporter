@@ -106,17 +106,27 @@ def dockerPullAndTag(dockerArch, sourceDockerImage, dockerBuildImage) {
 def buildAndPublishPythonRpms() {
     def rpmVersion = sh(script: "head -1 .version", returnStdout: true).trim()
     def rpmRelease = sh(script: "head -1 .rpm_release", returnStdout: true).trim()
-    withEnv(["RPM_VERSION=${rpmVersion}","RPM_RELEASE=${rpmRelease}"]) {
+    def rpmName = getRpmName(env.NAME, env.PY_VERSION)
+    def sleVersion = getSleVersion()
+    def rpmOs = getSleRpmOs(sleVersion)
+    def buildRelDir = buildRelDir(env.RPM_NAME, rpmOs, env.RPM_ARCH)
+
+    withEnv(["RPM_VERSION=${rpmVersion}",
+             "RPM_RELEASE=${rpmRelease}",
+             "SLE_VERSION=${sleVersion}",
+             "RPM_OS=${rpmOs}",
+             "RPM_NAME=${rpmName}",
+             "BUILD_RELDIR=${buildRelDir}"]) {
         buildCsmRpms(
-            name: env.RPM_NAME,
+            name: rpmName,
             version: rpmVersion,
             sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
             specFileBasename: env.SPEC_FILE,
-            buildReldir: env.BUILD_RELDIR,
+            buildReldir: buildRelDir,
             arch: env.RPM_ARCH,
         )
     }
-    publishRpms(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH, env.BUILD_RELDIR)
+    publishRpms(rpmName, rpmOs, env.RPM_ARCH, buildRelDir)
 }
 
 pipeline {
@@ -221,7 +231,6 @@ pipeline {
                     DOCKER_ARCH = sh(returnStdout: true, script: "[ ${RPM_ARCH} == 'x86_64' ] && echo -n 'amd64' || echo -n 'arm64'")
                     PY_VERSION = sh(script: "echo \${DOCKER_TAG%%-*}", returnStdout: true).trim()
                     DOCKER_BUILD_IMAGE = "${pyImage}:${DOCKER_TAG}-${DOCKER_ARCH}"
-                    RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
                 }
                 stages {
                     stage('Pull & tag') {
@@ -236,11 +245,6 @@ pipeline {
                                 args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
                                 image "${DOCKER_BUILD_IMAGE}"
                             }
-                        }
-                        environment {
-                            SLE_VERSION = getSleVersion()
-                            RPM_OS = getSleRpmOs(env.SLE_VERSION)
-                            BUILD_RELDIR = buildRelDir(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH)
                         }
                         steps {
                             buildAndPublishPythonRpms()
