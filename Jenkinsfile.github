@@ -91,7 +91,7 @@ pipeline {
         NAME = "bos-reporter"
         DESCRIPTION = "Configuration Framework Service Trust Environment"
         IS_STABLE = getBuildIsStable()
-        PYMOD_BUILD_PY_VERSION = "3.12"
+        PYMOD_BUILD_PY_VERSION = "3.13"
         BUILD_ROOT_RELDIR = buildRootReldir()
         META_RPM_OS = "noos"
         META_RPM_NAME = "${env.NAME}"
@@ -122,12 +122,10 @@ pipeline {
             steps {
                 sh "make lint"
 
-                // The RPM build metadata can be added outside of the matrix, because it is just based on the
-                // Git commit being built
                 runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/${env.META_RPM_SPEC_FILE}")
                 runLibraryScript("addRpmMetaData.sh", "${env.WORKSPACE}/${env.SPEC_FILE}")
 
-                // Just using this as a means to generate the netrc file that we need
+                // This generates the netrc file that we need
                 getDockerBuildArgs()
 
                 sh "make pre_clean"
@@ -193,7 +191,7 @@ pipeline {
                         name 'DOCKER_TAG'
                         // $pyImage:$PY_VERSION implies the SLES version used for the build
                         // $pyImage:$PY_VERSION-SLES15.5 dictates the python version and SLES version
-                        values '3.10', '3.11-SLES15.5', '3.11-SLES15.6','3.11-SLES15.7', '3.12', '3.13'
+                        values '3.6', '3.10', '3.11-SLES15.5', '3.11-SLES15.6','3.11-SLES15.7', '3.12', '3.13'
                     }
                     axis {
                         name 'RPM_ARCH'
@@ -213,9 +211,9 @@ pipeline {
                     stage('Pull & tag') {
                         steps {
                             lock('docker-image-pull') {
-                                sh "docker pull --platform linux/${DOCKER_ARCH} ${SOURCE_DOCKER_IMAGE}"
-                                sh "docker tag ${SOURCE_DOCKER_IMAGE} ${DOCKER_BUILD_IMAGE}"
+                                sh "docker pull --platform linux/${DOCKER_ARCH} ${SOURCE_DOCKER_IMAGE}"                                
                             }
+                            sh "docker tag ${SOURCE_DOCKER_IMAGE} ${DOCKER_BUILD_IMAGE}"
                         }
                     }
                     stage("Build") {
