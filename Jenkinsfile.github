@@ -103,6 +103,18 @@ def dockerPullAndTag(dockerArch, sourceDockerImage, dockerBuildImage) {
     }
 }
 
+def buildAndPublishPythonRpms() {
+    buildCsmRpms(
+        name: env.RPM_NAME,
+        version: RPM_VERSION,
+        sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
+        specFileBasename: env.SPEC_FILE,
+        buildReldir: env.BUILD_RELDIR,
+        arch: env.RPM_ARCH,
+    )
+    publishRpms(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH, env.BUILD_RELDIR)
+}
+
 pipeline {
     agent {
         label "metal-gcp-builder"
@@ -229,17 +241,7 @@ pipeline {
                             BUILD_RELDIR = buildRelDir(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH)
                         }
                         steps {
-                            script {
-                                buildCsmRpms(
-                                    name: env.RPM_NAME,
-                                    version: RPM_VERSION,
-                                    sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
-                                    specFileBasename: env.SPEC_FILE,
-                                    buildReldir: env.BUILD_RELDIR,
-                                    arch: env.RPM_ARCH,
-                                )
-                                publishRpms(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH, env.BUILD_RELDIR)
-                            }
+                            buildAndPublishPythonRpms()
                         }
                     }
                 }
