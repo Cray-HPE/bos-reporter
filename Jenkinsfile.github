@@ -109,7 +109,7 @@ def buildAndPublishPythonRpms() {
     def rpmName = getRpmName(env.NAME, env.PY_VERSION)
     def sleVersion = getSleVersion()
     def rpmOs = getSleRpmOs(sleVersion)
-    def buildRelDir = buildRelDir(env.RPM_NAME, rpmOs, env.RPM_ARCH)
+    def buildRelDir = buildRelDir(rpmName, rpmOs, env.RPM_ARCH)
 
     withEnv(["RPM_VERSION=${rpmVersion}",
              "RPM_RELEASE=${rpmRelease}",
