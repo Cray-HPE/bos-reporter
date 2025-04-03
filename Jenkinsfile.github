@@ -104,14 +104,18 @@ def dockerPullAndTag(dockerArch, sourceDockerImage, dockerBuildImage) {
 }
 
 def buildAndPublishPythonRpms() {
-    buildCsmRpms(
-        name: env.RPM_NAME,
-        version: RPM_VERSION,
-        sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
-        specFileBasename: env.SPEC_FILE,
-        buildReldir: env.BUILD_RELDIR,
-        arch: env.RPM_ARCH,
-    )
+    def RPM_VERSION = sh(script: "head -1 .version", returnStdout: true).trim()
+    def RPM_RELEASE = sh(script: "head -1 .rpm_release", returnStdout: true).trim()
+    withEnv(["RPM_VERSION=${RPM_VERSION}","RPM_RELEASE=${RPM_RELEASE}"]) {
+        buildCsmRpms(
+            name: env.RPM_NAME,
+            version: RPM_VERSION,
+            sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
+            specFileBasename: env.SPEC_FILE,
+            buildReldir: env.BUILD_RELDIR,
+            arch: env.RPM_ARCH,
+        )
+    }
     publishRpms(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH, env.BUILD_RELDIR)
 }
 
@@ -218,8 +222,6 @@ pipeline {
                     PY_VERSION = sh(script: "echo \${DOCKER_TAG%%-*}", returnStdout: true).trim()
                     DOCKER_BUILD_IMAGE = "${pyImage}:${DOCKER_TAG}-${DOCKER_ARCH}"
                     RPM_NAME = getRpmName(env.NAME, env.PY_VERSION)
-                    RPM_VERSION = sh(script: "head -1 .version", returnStdout: true).trim()
-                    RPM_RELEASE = sh(script: "head -1 .rpm_release", returnStdout: true).trim()
                 }
                 stages {
                     stage('Pull & tag') {
