@@ -55,8 +55,8 @@ TMPDIR := $(shell mktemp -d $(PWD)/.tmp.$(RPM_ARCH).$(PY_VERSION).$(SLE_VERSION)
 META_BUILD_DIR ?= $(TMPDIR)/$(META_BUILD_RELDIR)
 
 meta_rpm: meta_rpm_prepare meta_rpm_build_source meta_rpm_build meta_rpm_post_clean
-pymod_lint: pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
-pymod: pymod_build pymod_lint
+pymod_pylint: pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
+pymod: pymod_build pymod_pylint
 
 runbuildprep:
 		./cms_meta_tools/scripts/runBuildPrep.sh
