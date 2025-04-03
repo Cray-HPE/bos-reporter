@@ -174,9 +174,7 @@ pipeline {
                 stages {
                     stage("Pylint") {
                         steps {
-                            sh "make pymod_pylint_setup"
-                            sh "make pymod_pylint_errors"
-                            sh "make pymod_pylint_full"
+                            sh "make pymod_pylint"
                         }
                     }
                 }

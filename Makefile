@@ -34,7 +34,7 @@ RPM_VERSION ?= $(shell head -1 .version)
 RPM_RELEASE ?= $(shell head -1 .rpm_release)
 
 PIP_INSTALL_ARGS ?= --trusted-host arti.hpc.amslabs.hpecorp.net --trusted-host artifactory.algol60.net --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple --extra-index-url http://artifactory.algol60.net/artifactory/csm-python-modules/simple -c constraints.txt --no-cache
-PY_VERSION ?= 3.12
+PY_VERSION ?= 3.13
 RPM_ARCH ?= x86_64
 RPM_OS ?= sle15-sp6
 SLE_VERSION ?= 15.6
@@ -55,7 +55,8 @@ TMPDIR := $(shell mktemp -d $(PWD)/.tmp.$(RPM_ARCH).$(PY_VERSION).$(SLE_VERSION)
 META_BUILD_DIR ?= $(TMPDIR)/$(META_BUILD_RELDIR)
 
 meta_rpm: meta_rpm_prepare meta_rpm_build_source meta_rpm_build meta_rpm_post_clean
-pymod: pymod_build pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
+pymod_lint: pymod_pylint_setup pymod_pylint_errors pymod_pylint_full
+pymod: pymod_build pymod_lint
 
 runbuildprep:
 		./cms_meta_tools/scripts/runBuildPrep.sh
