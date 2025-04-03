@@ -104,12 +104,12 @@ def dockerPullAndTag(dockerArch, sourceDockerImage, dockerBuildImage) {
 }
 
 def buildAndPublishPythonRpms() {
-    def RPM_VERSION = sh(script: "head -1 .version", returnStdout: true).trim()
-    def RPM_RELEASE = sh(script: "head -1 .rpm_release", returnStdout: true).trim()
-    withEnv(["RPM_VERSION=${RPM_VERSION}","RPM_RELEASE=${RPM_RELEASE}"]) {
+    def rpmVersion = sh(script: "head -1 .version", returnStdout: true).trim()
+    def rpmRelease = sh(script: "head -1 .rpm_release", returnStdout: true).trim()
+    withEnv(["RPM_VERSION=${rpmVersion}","RPM_RELEASE=${rpmRelease}"]) {
         buildCsmRpms(
             name: env.RPM_NAME,
-            version: RPM_VERSION,
+            version: rpmVersion,
             sourceTarPath: env.GENERIC_PY_RPM_SOURCE_TAR,
             specFileBasename: env.SPEC_FILE,
             buildReldir: env.BUILD_RELDIR,
