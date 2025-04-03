@@ -215,7 +215,7 @@ pipeline {
                             dockerPullAndTag(env.DOCKER_ARCH, "${pyImage}:${DOCKER_TAG}", env.DOCKER_BUILD_IMAGE)
                         }
                     }
-                    stage("Build") {
+                    stage("Build & Publish") {
                         agent {
                             docker {
                                 reuseNode true
@@ -238,24 +238,8 @@ pipeline {
                                     buildReldir: env.BUILD_RELDIR,
                                     arch: env.RPM_ARCH,
                                 )
+                                publishRpms(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH, env.BUILD_RELDIR)
                             }
-                        }
-                    }
-                    stage ("Publish") {
-                        agent {
-                            docker {
-                                reuseNode true
-                                args "-v /home/jenkins/.ssh:/home/jenkins/.ssh -v /home/jenkins/.netrc:/home/jenkins/.netrc --platform linux/${DOCKER_ARCH}"
-                                image "${DOCKER_BUILD_IMAGE}"
-                            }
-                        }
-                        environment {
-                            SLE_VERSION = getSleVersion()
-                            RPM_OS = getSleRpmOs(env.SLE_VERSION)
-                            BUILD_RELDIR = buildRelDir(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH)
-                        }
-                        steps {
-                            publishRpms(env.RPM_NAME, env.RPM_OS, env.RPM_ARCH, env.BUILD_RELDIR)
                         }
                     }
                 }
