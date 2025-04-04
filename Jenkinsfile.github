@@ -58,22 +58,24 @@ def buildRelDir(rpmName, rpmOs, rpmArch) {
 }
 
 def publishRpms(rpmName, rpmOs, rpmArch, buildReldir) {
-    sh "ls -R ${buildReldir}"
-    echo "${rpmName} ${rpmOs} ${rpmArch}"
-    publishCsmRpms(
-        arch: "${rpmArch}",
-        component: "${rpmName}",
-        isStable: env.IS_STABLE,
-        os: "${rpmOs}",
-        pattern: "${buildReldir}/RPMS/${rpmArch}/*.rpm",
-    )
-    publishCsmRpms(
-        arch: "src",
-        component: "${rpmName}",
-        isStable: env.IS_STABLE,
-        os: "${rpmOs}",
-        pattern: "${buildReldir}/SRPMS/*.rpm",
-    )
+    lock('publish-rpms') {
+        sh "ls -R ${buildReldir}"
+        echo "${rpmName} ${rpmOs} ${rpmArch}"
+        publishCsmRpms(
+            arch: "${rpmArch}",
+            component: "${rpmName}",
+            isStable: env.IS_STABLE,
+            os: "${rpmOs}",
+            pattern: "${buildReldir}/RPMS/${rpmArch}/*.rpm",
+        )
+        publishCsmRpms(
+            arch: "src",
+            component: "${rpmName}",
+            isStable: env.IS_STABLE,
+            os: "${rpmOs}",
+            pattern: "${buildReldir}/SRPMS/*.rpm",
+        )
+    }
 }
 
 def initPrep() {
