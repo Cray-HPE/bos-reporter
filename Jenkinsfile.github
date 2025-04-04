@@ -58,7 +58,7 @@ def buildRelDir(rpmName, rpmOs, rpmArch) {
 }
 
 def publishRpms(rpmName, rpmOs, rpmArch, buildReldir) {
-    lock('publish-rpms') {
+    lock("publish-rpms-${rpmOs}") {
         sh "ls -R ${buildReldir}"
         echo "${rpmName} ${rpmOs} ${rpmArch}"
         publishCsmRpms(
@@ -101,8 +101,8 @@ def initPrep() {
 def dockerPullAndTag(dockerArch, sourceDockerImage, dockerBuildImage) {
     lock('docker-image-pull') {
         sh "docker pull --platform linux/${dockerArch} ${sourceDockerImage}"
-        sh "docker tag ${sourceDockerImage} ${dockerBuildImage}"
     }
+    sh "docker tag ${sourceDockerImage} ${dockerBuildImage}"
 }
 
 def buildAndPublishPythonRpms() {
