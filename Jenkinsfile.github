@@ -101,8 +101,8 @@ def initPrep() {
 def dockerPullAndTag(dockerArch, sourceDockerImage, dockerBuildImage) {
     lock('docker-image-pull') {
         sh "docker pull --platform linux/${dockerArch} ${sourceDockerImage}"
-        sh "docker tag ${sourceDockerImage} ${dockerBuildImage}"
     }
+    sh "docker tag ${sourceDockerImage} ${dockerBuildImage}"
 }
 
 def buildAndPublishPythonRpms() {
