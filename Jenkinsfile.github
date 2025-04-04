@@ -58,7 +58,7 @@ def buildRelDir(rpmName, rpmOs, rpmArch) {
 }
 
 def publishRpms(rpmName, rpmOs, rpmArch, buildReldir) {
-    lock("publish-rpms-${rpmOs}") {
+    lock('publish-rpms') {
         sh "ls -R ${buildReldir}"
         echo "${rpmName} ${rpmOs} ${rpmArch}"
         publishCsmRpms(
