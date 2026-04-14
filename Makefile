@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2024-2025 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2024-2026 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -79,7 +79,7 @@ python_rpms_prepare:
 			--exclude $(GENERIC_PY_RPM_SOURCE_TAR) \
 			--exclude './pylint-*' \
 			--exclude ./$(META_RPM_SPEC_FILE) \
-			-cvf $(GENERIC_PY_RPM_SOURCE_TAR) .
+			-cvf $(GENERIC_PY_RPM_SOURCE_TAR) *
 
 python_rpm_build:
 		RPM_NAME='$(RPM_NAME)' \
