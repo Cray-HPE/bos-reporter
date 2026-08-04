@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Dependencies
-
+- Bump `actions/checkout` from 4 to 7 ([#13](https://github.com/Cray-HPE/bos-reporter/pull/13), [#15](https://github.com/Cray-HPE/bos-reporter/pull/15))
 - Bump `actions/checkout` from 4 to 5 ([#13](https://github.com/Cray-HPE/bos-reporter/pull/13))
 
 ## [3.3.4] - 2025/07/02
